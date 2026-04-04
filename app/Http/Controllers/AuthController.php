@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -50,10 +52,11 @@ class AuthController extends Controller
         } elseif ($user->isCustomer()) {
             $request->session()->put('password_reset_return', ['from' => 'customer', 'tenant' => null]);
         } elseif ($user->tenant_id) {
+            $tenant = Tenant::find($user->tenant_id);
             // Any rental-company user tied to a tenant (admin / future roles)
             $request->session()->put('password_reset_return', [
                 'from' => 'tenant',
-                'tenant' => (string) $user->tenant_id,
+                'tenant' => $tenant?->slug ?: (string) $user->tenant_id,
             ]);
         }
 
@@ -188,7 +191,8 @@ class AuthController extends Controller
             return redirect()->route('superadmin.login')->with('success', 'Password reset successful. You can now sign in.');
         }
 
-        return redirect()->route('login', ['tenant' => $user->tenant_id])->with('success', 'Password reset successful. You can now sign in.');
+        $tenant = $user->tenant_id ? Tenant::find($user->tenant_id) : null;
+        return redirect()->route('login', ['tenant' => $tenant?->slug ?: $user->tenant_id])->with('success', 'Password reset successful. You can now sign in.');
     }
 
     /**
@@ -217,31 +221,62 @@ class AuthController extends Controller
         }
 
         $from = $return['from'] ?? 'home';
-        $tenantId = isset($return['tenant']) && $return['tenant'] !== null && $return['tenant'] !== ''
-            ? (int) $return['tenant']
+        $tenantKey = isset($return['tenant']) && $return['tenant'] !== null && $return['tenant'] !== ''
+            ? (string) $return['tenant']
             : null;
 
         return match ($from) {
             'customer' => route('customer.login'),
             'superadmin' => route('superadmin.login'),
-            'tenant' => $tenantId ? $this->centralTenantLoginUrl($tenantId) : url('/'),
+            'tenant' => $tenantKey ? $this->centralTenantLoginUrl($tenantKey) : url('/'),
             default => url('/'),
         };
     }
 
     /** Central app: tenant-branded login uses query ?tenant= */
-    protected function centralTenantLoginUrl(int $tenantId): string
+    protected function centralTenantLoginUrl(string $tenantKey): string
     {
-        return url('/login?'.http_build_query(['tenant' => $tenantId]));
+        return url('/login?'.http_build_query(['tenant' => $tenantKey]));
+    }
+
+    protected function resolveTenantFromQuery(?string $tenantParam): ?Tenant
+    {
+        $tenantParam = $tenantParam !== null ? trim($tenantParam) : null;
+        if ($tenantParam === null || $tenantParam === '') {
+            return null;
+        }
+
+        // Backward compatible: tenant=4
+        if (ctype_digit($tenantParam)) {
+            return Tenant::find((int) $tenantParam);
+        }
+
+        // New: tenant=acme-rentals
+        $slug = Str::slug($tenantParam);
+        if ($slug === '') {
+            return null;
+        }
+
+        return Tenant::where('slug', $slug)->first();
     }
 
     public function showLogin(Request $request)
     {
+        // If a tenant domain is opened directly (e.g. company.localhost:8000/login),
+        // resolve tenant by host and show tenant login instead of central superadmin login.
+        $host = $request->getHost();
+        $centralDomains = config('tenancy.central_domains', []);
+        if (! in_array($host, $centralDomains, true)) {
+            $tenantByHost = Tenant::where('domain', $host)->first();
+            if ($tenantByHost) {
+                return $this->renderTenantLoginPage($tenantByHost);
+            }
+        }
+
         // If this request includes a tenant query (from the email link),
         // show the tenant-specific login page.
         if ($request->query('tenant')) {
-            $tenantId = (int) $request->query('tenant');
-            $tenant = Tenant::find($tenantId);
+            $tenant = $this->resolveTenantFromQuery((string) $request->query('tenant'));
 
             if (! $tenant) {
                 return view('auth.tenant-login')->withErrors([
@@ -249,21 +284,7 @@ class AuthController extends Controller
                 ]);
             }
 
-            // If domain is disabled (or expired), show the domain disabled page (pre-login)
-            $expired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry);
-            if (! $tenant->is_domain_active || $expired) {
-                $plans = SubscriptionPlan::where('is_active', true)
-                    ->orderByRaw("FIELD(`key`, 'basic', 'standard', 'premium')")
-                    ->get();
-
-                $hasPending = PlanExtensionRequest::where('tenant_id', $tenant->id)
-                    ->where('status', 'pending')
-                    ->exists();
-
-                return view('auth.tenant-domain-disabled', compact('tenant', 'plans', 'hasPending'));
-            }
-
-            return view('auth.tenant-login', compact('tenant'));
+            return $this->renderTenantLoginPage($tenant);
         }
 
         // Central /login is reserved for tenant-link login. Super admin login lives on its own page.
@@ -362,8 +383,8 @@ class AuthController extends Controller
                 }
             }
 
-            // Tenant admins must sign in from their company login URL (includes hidden tenant id)
-            if ($user->isAdmin()) {
+            // Tenant users (admin + staff) must sign in from their company login URL.
+            if ($user->isTenantUser()) {
                 if ($expectedTenantId === null) {
                     Auth::logout();
                     $request->session()->invalidate();
@@ -398,7 +419,7 @@ class AuthController extends Controller
                 }
             }
 
-            if ($user->isAdmin() && $user->tenant) {
+            if ($user->isTenantUser() && $user->tenant) {
                 // Prevent tenant admins from logging in until approved
                 if ($user->tenant->status !== 'approved') {
                     Auth::logout();
@@ -425,13 +446,20 @@ class AuthController extends Controller
                         'email' => 'Your company domain is currently disabled. Please renew your subscription or contact the Super Admin for assistance.',
                     ]);
                 }
+
+                if ($user->isStaff() && ! $user->is_active) {
+                    Auth::logout();
+                    return back()->withErrors([
+                        'email' => 'Your staff account is disabled. Please contact your tenant admin.',
+                    ]);
+                }
             }
 
             if ($user->isSuperAdmin()) {
                 return redirect()->route('superadmin.dashboard');
             }
 
-            if ($user->isAdmin()) {
+            if ($user->isTenantUser()) {
                 return redirect()->route('admin.dashboard');
             }
 
@@ -462,6 +490,8 @@ class AuthController extends Controller
 
         $tenant = Tenant::create([
             'company_name' => $data['company_name'],
+            'slug' => $this->uniqueTenantSlug($data['company_name']),
+            'domain' => $this->defaultTenantDomainFromCompany($data['company_name']),
             'owner_name' => $data['owner_name'],
             'status' => 'pending',
             'email' => $data['email'],
@@ -496,11 +526,12 @@ class AuthController extends Controller
         ]);
 
         $tenant = Tenant::findOrFail($data['tenant_id']);
+        $tenantKey = $tenant->slug ?: (string) $tenant->id;
 
         // Only allow requests if the tenant is approved but currently disabled/expired.
         $expired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry);
         if ($tenant->status !== 'approved' || ($tenant->is_domain_active && ! $expired)) {
-            return redirect()->route('login', ['tenant' => $tenant->id])
+            return redirect()->route('login', ['tenant' => $tenantKey])
                 ->withErrors(['email' => 'This tenant does not require a plan extension at the moment.']);
         }
 
@@ -509,7 +540,7 @@ class AuthController extends Controller
             ->exists();
 
         if ($alreadyPending) {
-            return redirect()->route('login', ['tenant' => $tenant->id])
+            return redirect()->route('login', ['tenant' => $tenantKey])
                 ->with('success', 'Your extension request is already pending approval.');
         }
 
@@ -519,7 +550,7 @@ class AuthController extends Controller
             'status' => 'pending',
         ]);
 
-        return redirect()->route('login', ['tenant' => $tenant->id])
+        return redirect()->route('login', ['tenant' => $tenantKey])
             ->with('success', 'Your extension request has been sent to the Super Admin for review.');
     }
 
@@ -568,7 +599,8 @@ class AuthController extends Controller
         }
 
         if ($tenantId) {
-            return redirect()->route('login', ['tenant' => $tenantId]);
+            $tenant = Tenant::find($tenantId);
+            return redirect()->route('login', ['tenant' => $tenant?->slug ?: $tenantId]);
         }
 
         return redirect()->route('login');
@@ -595,6 +627,8 @@ class AuthController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string', 'max:500'],
             'password' => ['nullable', 'confirmed', 'min:8'],
+            'license_front' => ['nullable', 'image', 'max:5120'],
+            'license_back' => ['nullable', 'image', 'max:5120'],
         ]);
 
         $user->name = $data['name'];
@@ -602,8 +636,22 @@ class AuthController extends Controller
         $user->phone = $data['phone'] ?? null;
         $user->address = $data['address'] ?? null;
 
+        if ($request->hasFile('license_front')) {
+            if ($user->driver_license_front_path) {
+                Storage::disk('public')->delete($user->driver_license_front_path);
+            }
+            $user->driver_license_front_path = $request->file('license_front')->store('licenses', 'public');
+        }
+
+        if ($request->hasFile('license_back')) {
+            if ($user->driver_license_back_path) {
+                Storage::disk('public')->delete($user->driver_license_back_path);
+            }
+            $user->driver_license_back_path = $request->file('license_back')->store('licenses', 'public');
+        }
+
         if (! empty($data['password'])) {
-            $user->password = Hash::make($data['password']);
+            $user->password = $data['password'];
         }
 
         $user->save();
@@ -611,6 +659,63 @@ class AuthController extends Controller
         return redirect()
             ->route('customer.profile')
             ->with('success', 'Profile updated successfully.');
+    }
+
+    protected function uniqueTenantSlug(string $companyName, ?int $ignoreTenantId = null): string
+    {
+        $base = Str::slug($companyName);
+        if ($base === '') {
+            $base = 'tenant';
+        }
+
+        $slug = $base;
+        $i = 2;
+        while (
+            Tenant::where('slug', $slug)
+                ->when($ignoreTenantId !== null, fn ($q) => $q->where('id', '!=', $ignoreTenantId))
+                ->exists()
+        ) {
+            $slug = $base . '-' . $i;
+            $i++;
+        }
+
+        return $slug;
+    }
+
+    protected function defaultTenantDomainFromCompany(string $companyName): string
+    {
+        $baseDomain = env('TENANT_BASE_DOMAIN', 'localhost');
+        $baseDomain = ltrim(strtolower(trim((string) $baseDomain)), '.');
+
+        $slug = $this->uniqueTenantSlug($companyName);
+        $candidate = $slug . '.' . $baseDomain;
+        $i = 2;
+
+        while (Tenant::where('domain', $candidate)->exists()) {
+            $candidate = $slug . '-' . $i . '.' . $baseDomain;
+            $i++;
+        }
+
+        return $candidate;
+    }
+
+    protected function renderTenantLoginPage(Tenant $tenant)
+    {
+        // If domain is disabled (or expired), show the domain disabled page (pre-login)
+        $expired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry);
+        if (! $tenant->is_domain_active || $expired) {
+            $plans = SubscriptionPlan::where('is_active', true)
+                ->orderByRaw("FIELD(`key`, 'basic', 'standard', 'premium')")
+                ->get();
+
+            $hasPending = PlanExtensionRequest::where('tenant_id', $tenant->id)
+                ->where('status', 'pending')
+                ->exists();
+
+            return view('auth.tenant-domain-disabled', compact('tenant', 'plans', 'hasPending'));
+        }
+
+        return view('auth.tenant-login', compact('tenant'));
     }
 }
 

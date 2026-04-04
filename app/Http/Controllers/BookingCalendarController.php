@@ -20,6 +20,7 @@ class BookingCalendarController extends TenantControllerBase
 
         $bookings = Booking::with(['vehicle', 'customer'])
             ->where('tenant_id', $tenantId)
+            ->where('status', 'confirmed')
             ->where('start_date', '<=', $end->toDateString())
             ->where('end_date', '>=', $start->toDateString())
             ->orderBy('start_date')

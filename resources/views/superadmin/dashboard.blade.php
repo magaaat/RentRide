@@ -3,23 +3,23 @@
 @section('title', 'Super Admin Dashboard')
 
 @section('content')
-<div class="mb-4">
-    <h3 class="text-xl font-semibold">Super Admin Dashboard</h3>
-    <p class="text-sm text-slate-300">Platform overview and key metrics.</p>
+<div class="mb-8">
+    <h1 class="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">Super Admin dashboard</h1>
+    <p class="mt-2 text-sm text-slate-400">Platform overview and key metrics.</p>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-        <div class="text-sm text-slate-300">Total Tenants</div>
-        <div class="mt-2 text-3xl font-bold">{{ $totalTenants }}</div>
+<div class="grid grid-cols-1 gap-5 md:grid-cols-3">
+    <div class="rr-panel-elevated p-6">
+        <div class="text-sm font-medium text-slate-400">Total tenants</div>
+        <div class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-50">{{ $totalTenants }}</div>
     </div>
-    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-        <div class="text-sm text-slate-300">Active Subscriptions</div>
-        <div class="mt-2 text-3xl font-bold">{{ $activeSubscriptions }}</div>
+    <div class="rr-panel-elevated p-6">
+        <div class="text-sm font-medium text-slate-400">Active subscriptions</div>
+        <div class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-slate-50">{{ $activeSubscriptions }}</div>
     </div>
-    <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-        <div class="text-sm text-slate-300">Platform Revenue</div>
-        <div class="mt-2 text-3xl font-bold">₱{{ number_format($platformRevenue, 2) }}</div>
+    <div class="rr-panel-elevated p-6">
+        <div class="text-sm font-medium text-slate-400">Platform revenue</div>
+        <div class="mt-2 text-3xl font-bold tabular-nums tracking-tight text-violet-300">₱{{ number_format($platformRevenue, 2) }}</div>
     </div>
 </div>
 @endsection

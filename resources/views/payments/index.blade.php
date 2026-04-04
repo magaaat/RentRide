@@ -3,11 +3,12 @@
 @section('title', 'Payments')
 
 @section('content')
-<div class="flex items-center justify-between mb-4">
-    <h3 class="text-xl font-semibold">Payments</h3>
+<div class="mb-8">
+    <h1 class="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">Payments</h1>
+    <p class="mt-1 text-sm text-slate-400">Recorded payments for your bookings.</p>
 </div>
 
-<div class="overflow-hidden rounded-xl border rr-border rr-surface">
+<div class="overflow-hidden rounded-xl border rr-border rr-surface shadow-rr">
     <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
             <thead class="rr-table-head text-slate-200">

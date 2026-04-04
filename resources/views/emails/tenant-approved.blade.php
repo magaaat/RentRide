@@ -17,7 +17,7 @@
     </p>
 
     <p style="font-size: 13px; color: #555;">
-        (Your assigned tenant domain is: <strong>{{ $loginDomain }}</strong>. For local testing we use the link above.)
+        Your company login domain is: <strong>{{ $loginDomain }}</strong> (same domain used for tenant sign in).
     </p>
 
     <p>Use the email address <strong>{{ $tenant->email }}</strong> to log in.</p>

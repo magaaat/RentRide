@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class TenantController extends Controller
 {
@@ -27,6 +28,7 @@ class TenantController extends Controller
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string',
             'theme' => 'required|in:slate,indigo,emerald,fuchsia',
+            'logo' => 'nullable|image|max:5120',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|confirmed|min:8',
@@ -39,6 +41,14 @@ class TenantController extends Controller
             'address' => $data['address'] ?? null,
             'theme' => $data['theme'],
         ]);
+
+        if ($request->hasFile('logo')) {
+            if ($tenant->logo_path) {
+                Storage::disk('public')->delete($tenant->logo_path);
+            }
+            $tenant->logo_path = $request->file('logo')->store('tenant-logos', 'public');
+            $tenant->save();
+        }
 
         $user->name = $data['name'];
         $user->email = $data['email'];

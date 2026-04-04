@@ -49,7 +49,7 @@
                                             Reject
                                         </button>
                                     </form>
-                                    <a href="{{ route('superadmin.tenants.show', $req->tenant) }}" class="text-xs text-slate-300 hover:text-slate-100 underline">
+                                    <a href="{{ route('superadmin.tenants.show', $req->tenant) }}" class="rr-link-accent text-xs underline">
                                         View tenant
                                     </a>
                                 </div>
@@ -89,7 +89,7 @@
                             <td class="px-5 py-3">{{ ucfirst($req->requested_plan) }}</td>
                             <td class="px-5 py-3">
                                 @if($req->status === 'approved')
-                                    <span class="inline-flex items-center rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 text-xs font-semibold">Approved</span>
+                                    <span class="rr-chip-accent inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">Approved</span>
                                 @else
                                     <span class="inline-flex items-center rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 px-2 py-0.5 text-xs font-semibold">Rejected</span>
                                 @endif

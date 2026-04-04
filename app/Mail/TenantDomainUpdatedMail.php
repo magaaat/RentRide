@@ -7,14 +7,13 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class TenantApprovedMail extends Mailable
+class TenantDomainUpdatedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
         public Tenant $tenant,
-        public string $loginDomain,
-        public ?string $temporaryPassword = null
+        public ?string $oldDomain = null
     ) {
     }
 
@@ -23,13 +22,13 @@ class TenantApprovedMail extends Mailable
         $loginUrl = $this->tenant->tenantLoginUrl()
             ?? route('login', ['tenant' => $this->tenant->slug ?: $this->tenant->id], absolute: true);
 
-        return $this->subject('Your RentRide tenant has been approved')
-            ->view('emails.tenant-approved')
+        return $this->subject('Your RentRide login domain was updated')
+            ->view('emails.tenant-domain-updated')
             ->with([
                 'tenant' => $this->tenant,
-                'loginDomain' => $this->loginDomain,
+                'oldDomain' => $this->oldDomain,
+                'newDomain' => $this->tenant->domain,
                 'loginUrl' => $loginUrl,
-                'temporaryPassword' => $this->temporaryPassword,
             ]);
     }
 }

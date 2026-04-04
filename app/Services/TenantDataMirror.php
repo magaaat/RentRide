@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Payment;
+use App\Models\User;
 use App\Models\Vehicle;
 use DateTimeInterface;
 use Illuminate\Support\Facades\Config;
@@ -191,6 +192,43 @@ class TenantDataMirror
             $conn->table('payments')->where('id', $payment->id)->delete();
         } catch (Throwable $e) {
             Log::debug('TenantDataMirror: deletePayment failed', ['e' => $e->getMessage()]);
+        }
+    }
+
+    public function syncUser(User $user): void
+    {
+        if (! $user->tenant_id) {
+            return;
+        }
+
+        $conn = $this->connection((int) $user->tenant_id);
+        if (! $conn) {
+            return;
+        }
+
+        $this->withForeignKeysOff($conn, function () use ($conn, $user) {
+            $conn->table('users')->updateOrInsert(
+                ['id' => $user->id],
+                $this->normalizeRow($user)
+            );
+        });
+    }
+
+    public function deleteUser(User $user): void
+    {
+        if (! $user->tenant_id) {
+            return;
+        }
+
+        $conn = $this->connection((int) $user->tenant_id);
+        if (! $conn) {
+            return;
+        }
+
+        try {
+            $conn->table('users')->where('id', $user->id)->delete();
+        } catch (Throwable $e) {
+            Log::debug('TenantDataMirror: deleteUser failed', ['e' => $e->getMessage()]);
         }
     }
 

@@ -10,6 +10,7 @@ class Tenant extends Model
 {
     protected $fillable = [
         'company_name',
+        'slug',
         'owner_name',
         'email',
         'status',
@@ -18,6 +19,8 @@ class Tenant extends Model
         'phone',
         'address',
         'theme',
+        'logo_path',
+        'staff_role_permissions',
         'subscription_plan',
         'subscription_expiry',
         'is_featured',
@@ -27,6 +30,7 @@ class Tenant extends Model
         'is_domain_active' => 'boolean',
         'is_featured' => 'boolean',
         'subscription_expiry' => 'date',
+        'staff_role_permissions' => 'array',
     ];
 
     /**
@@ -76,6 +80,22 @@ class Tenant extends Model
     public function planExtensionRequests(): HasMany
     {
         return $this->hasMany(PlanExtensionRequest::class);
+    }
+
+    /**
+     * Full URL to this tenant's login page (subdomain / assigned domain + APP_URL port).
+     */
+    public function tenantLoginUrl(): ?string
+    {
+        if (! $this->domain) {
+            return null;
+        }
+
+        $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'http';
+        $port = parse_url((string) config('app.url'), PHP_URL_PORT);
+        $portSegment = $port ? ':' . $port : '';
+
+        return $scheme . '://' . $this->domain . $portSegment . '/login';
     }
 
     public function hasFeature(string $feature): bool

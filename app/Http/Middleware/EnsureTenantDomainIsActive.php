@@ -35,13 +35,13 @@ class EnsureTenantDomainIsActive
         }
 
         if ($tenant->status !== 'approved' || ! $tenant->is_domain_active || $expired) {
-            $tenantId = $user->tenant_id;
+            $tenantKey = $tenant->slug ?: $user->tenant_id;
 
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login', ['tenant' => $tenantId])->withErrors([
+            return redirect()->route('login', ['tenant' => $tenantKey])->withErrors([
                 'email' => 'Your company domain is currently disabled. Please contact Super Admin or renew your plan.',
             ]);
         }

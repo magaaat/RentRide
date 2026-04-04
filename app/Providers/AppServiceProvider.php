@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Payment;
+use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\TenantDataMirror;
 use Illuminate\Support\ServiceProvider;
@@ -52,6 +53,17 @@ class AppServiceProvider extends ServiceProvider
         });
         Payment::deleted(static function (Payment $payment) use ($mirror) {
             $mirror->deletePayment($payment);
+        });
+
+        User::saved(static function (User $user) use ($mirror) {
+            if ($user->tenant_id) {
+                $mirror->syncUser($user);
+            }
+        });
+        User::deleted(static function (User $user) use ($mirror) {
+            if ($user->tenant_id) {
+                $mirror->deleteUser($user);
+            }
         });
     }
 }

@@ -3,34 +3,35 @@
 @section('title', 'My rentals - RentRide')
 
 @section('content')
-<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+<div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
     <div>
-        <h1 class="text-2xl font-semibold">Welcome, {{ $user->name }}</h1>
-        <p class="mt-1 text-sm text-slate-400">Search vehicles, pick a rental company, and track your bookings — all in one place.</p>
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">Welcome, {{ $user->name }}</h1>
+        <p class="mt-2 text-sm leading-relaxed text-slate-400">Search vehicles, browse companies, and track your bookings.</p>
     </div>
 </div>
 
-<h2 class="text-lg font-semibold text-slate-200 mb-3">Rental companies</h2>
-<p class="text-sm text-slate-400 mb-4">Choose a company to see available cars and prices.</p>
-<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-10">
+<h2 class="mb-1 text-lg font-semibold text-slate-100">Rental companies</h2>
+<p class="mb-4 text-sm text-slate-500">Choose a company to see vehicles and prices.</p>
+<div class="mb-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
     @forelse($tenants as $t)
-        <a href="{{ route('customer.tenants.vehicles', $t) }}" class="group rounded-xl border border-slate-800 bg-slate-900/60 p-5 hover:border-emerald-500/40 hover:bg-slate-900 transition">
-            <div class="font-semibold text-slate-100 group-hover:text-emerald-300">{{ $t->company_name }}</div>
+        <a href="{{ route('customer.tenants.vehicles', $t) }}" class="group rounded-xl border border-slate-700/80 bg-slate-900/50 p-5 shadow-rr-sm transition hover:border-violet-500/35 hover:bg-slate-900/80 hover:shadow-rr">
+            <div class="font-semibold text-slate-100 group-hover:text-violet-300">{{ $t->company_name }}</div>
             <p class="mt-2 text-sm text-slate-400 line-clamp-2">{{ $t->address ?? 'Address on file' }}</p>
             @if($t->phone)
                 <p class="mt-1 text-xs text-slate-500">Phone: {{ $t->phone }}</p>
             @endif
-            <span class="mt-3 inline-flex text-xs font-semibold text-emerald-400">View vehicles →</span>
+            <span class="mt-3 inline-flex text-xs font-semibold text-violet-300">View vehicles →</span>
         </a>
     @empty
         <p class="text-slate-400 text-sm col-span-full">No rental companies are available yet. Check back soon.</p>
     @endforelse
 </div>
 
-<h2 class="text-lg font-semibold text-slate-200 mb-3">Active bookings</h2>
-<div class="overflow-x-auto rounded-xl border border-slate-800 mb-10">
+<h2 class="mb-1 text-lg font-semibold text-slate-100">Active bookings</h2>
+<p class="mb-4 text-sm text-slate-500">Pending and confirmed trips.</p>
+<div class="mb-10 -mx-1 overflow-x-auto rounded-xl border border-slate-700/80 bg-slate-900/40 shadow-rr-sm sm:mx-0">
     <table class="min-w-full text-sm">
-        <thead class="bg-slate-800/80 text-slate-200">
+        <thead class="bg-slate-800/60 text-slate-200">
             <tr class="text-left">
                 <th class="px-4 py-3 font-semibold">Company</th>
                 <th class="px-4 py-3 font-semibold">Vehicle</th>
@@ -68,10 +69,11 @@
     </table>
 </div>
 
-<h2 class="text-lg font-semibold text-slate-200 mb-3">Rental history</h2>
-<div class="overflow-x-auto rounded-xl border border-slate-800">
+<h2 class="mb-1 text-lg font-semibold text-slate-100">Rental history</h2>
+<p class="mb-4 text-sm text-slate-500">Completed and cancelled trips.</p>
+<div class="-mx-1 overflow-x-auto rounded-xl border border-slate-700/80 bg-slate-900/40 shadow-rr-sm sm:mx-0">
     <table class="min-w-full text-sm">
-        <thead class="bg-slate-800/80 text-slate-200">
+        <thead class="bg-slate-800/60 text-slate-200">
             <tr class="text-left">
                 <th class="px-4 py-3 font-semibold">Company</th>
                 <th class="px-4 py-3 font-semibold">Vehicle</th>

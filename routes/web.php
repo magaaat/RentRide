@@ -14,6 +14,7 @@ use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantReportController;
 use App\Http\Controllers\BookingCalendarController;
 use App\Http\Controllers\MaintenanceController;
+use App\Http\Controllers\StaffController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 use App\Models\SubscriptionPlan;
@@ -33,6 +34,7 @@ Route::get('/', function () {
 
     $featuredTenants = Tenant::where('status', 'approved')
         ->where('is_domain_active', true)
+        ->where('subscription_plan', 'premium')
         ->where('is_featured', true)
         ->orderBy('company_name')
         ->limit(8)
@@ -91,39 +93,60 @@ Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
     Route::post('/superadmin/extensions/{extension}/approve', [SuperAdminExtensionController::class, 'approve'])->name('superadmin.extensions.approve');
     Route::post('/superadmin/extensions/{extension}/reject', [SuperAdminExtensionController::class, 'reject'])->name('superadmin.extensions.reject');
 
-    // Rental admin
-    Route::get('/admin/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
-    Route::get('/admin/reports', [TenantReportController::class, 'index'])->name('tenant.reports');
-    Route::get('/admin/analytics', [TenantReportController::class, 'analytics'])
-        ->middleware('tenant.feature:advanced_analytics')
-        ->name('tenant.analytics');
-    Route::get('/admin/profile', [TenantController::class, 'profile'])->name('admin.profile');
-    Route::put('/admin/profile', [TenantController::class, 'updateProfile'])->name('admin.profile.update');
+    // Rental tenant users (Admin + Staff)
+    Route::middleware('tenant.user')->group(function () {
+        Route::get('/admin/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
 
-    Route::get('vehicles/maintenance', [MaintenanceController::class, 'index'])
-        ->middleware('tenant.feature:maintenance_tracking')
-        ->name('vehicles.maintenance');
+        Route::get('/admin/reports', [TenantReportController::class, 'index'])
+            ->middleware('tenant.permission:reports.view')
+            ->name('tenant.reports');
+        Route::get('/admin/analytics', [TenantReportController::class, 'analytics'])
+            ->middleware(['tenant.permission:reports.view', 'tenant.feature:advanced_analytics'])
+            ->name('tenant.analytics');
 
-    Route::resource('vehicles', VehicleController::class)->except(['show']);
-    Route::resource('customers', CustomerController::class);
+        Route::get('vehicles/maintenance', [MaintenanceController::class, 'index'])
+            ->middleware(['tenant.permission:maintenance.manage', 'tenant.feature:maintenance_tracking'])
+            ->name('vehicles.maintenance');
 
-    Route::get('bookings/calendar', [BookingCalendarController::class, 'index'])
-        ->middleware('tenant.feature:booking_calendar')
-        ->name('bookings.calendar');
-    Route::get('bookings', [BookingController::class, 'index'])->name('bookings.index');
-    Route::get('bookings/create', [BookingController::class, 'create'])->name('bookings.create');
-    Route::post('bookings', [BookingController::class, 'store'])->name('bookings.store');
-    Route::post('bookings/{booking}/status', [BookingController::class, 'updateStatus'])->name('bookings.updateStatus');
+        Route::resource('vehicles', VehicleController::class)
+            ->except(['show'])
+            ->middleware('tenant.permission:vehicles.manage');
+        Route::resource('customers', CustomerController::class)
+            ->except(['edit', 'update'])
+            ->middleware('tenant.permission:customers.manage');
 
-    Route::middleware('tenant.feature:payment_tracking')->group(function () {
-        Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
-        Route::get('payments/{booking}/create', [PaymentController::class, 'create'])->name('payments.create');
-        Route::post('payments/{booking}', [PaymentController::class, 'store'])->name('payments.store');
+        Route::get('bookings/calendar', [BookingCalendarController::class, 'index'])
+            ->middleware(['tenant.permission:bookings.manage', 'tenant.feature:booking_calendar'])
+            ->name('bookings.calendar');
+        Route::get('bookings', [BookingController::class, 'index'])->middleware('tenant.permission:bookings.manage')->name('bookings.index');
+        Route::get('bookings/create', [BookingController::class, 'create'])->middleware('tenant.permission:bookings.manage')->name('bookings.create');
+        Route::post('bookings', [BookingController::class, 'store'])->middleware('tenant.permission:bookings.manage')->name('bookings.store');
+        Route::post('bookings/{booking}/status', [BookingController::class, 'updateStatus'])->middleware('tenant.permission:bookings.manage')->name('bookings.updateStatus');
+
+        Route::middleware(['tenant.permission:payments.manage', 'tenant.feature:payment_tracking'])->group(function () {
+            Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
+            Route::get('payments/{booking}/create', [PaymentController::class, 'create'])->name('payments.create');
+            Route::post('payments/{booking}', [PaymentController::class, 'store'])->name('payments.store');
+        });
     });
 
-    Route::get('subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');
-    Route::get('subscriptions/upgrade', [SubscriptionController::class, 'upgradeForm'])->name('subscriptions.upgrade');
-    Route::post('subscriptions/upgrade', [SubscriptionController::class, 'upgrade'])->name('subscriptions.upgrade.post');
+    // Tenant owner/admin only
+    Route::middleware('tenant.admin')->group(function () {
+        Route::get('/admin/profile', [TenantController::class, 'profile'])->name('admin.profile');
+        Route::put('/admin/profile', [TenantController::class, 'updateProfile'])->name('admin.profile.update');
+
+        Route::get('/admin/staff', [StaffController::class, 'index'])->name('admin.staff.index');
+        Route::get('/admin/staff/create', [StaffController::class, 'create'])->name('admin.staff.create');
+        Route::post('/admin/staff', [StaffController::class, 'store'])->name('admin.staff.store');
+        Route::post('/admin/staff/role-permissions', [StaffController::class, 'updateRolePermissions'])->name('admin.staff.role-permissions.update');
+        Route::get('/admin/staff/{staff}/edit', [StaffController::class, 'edit'])->name('admin.staff.edit');
+        Route::put('/admin/staff/{staff}', [StaffController::class, 'update'])->name('admin.staff.update');
+        Route::delete('/admin/staff/{staff}', [StaffController::class, 'destroy'])->name('admin.staff.destroy');
+
+        Route::get('subscriptions', [SubscriptionController::class, 'index'])->name('subscriptions.index');
+        Route::get('subscriptions/upgrade', [SubscriptionController::class, 'upgradeForm'])->name('subscriptions.upgrade');
+        Route::post('subscriptions/upgrade', [SubscriptionController::class, 'upgrade'])->name('subscriptions.upgrade.post');
+    });
 
     // Customer portal (browse tenants, vehicles, book — central database)
     Route::middleware('customer')->prefix('customer')->name('customer.')->group(function () {

@@ -87,9 +87,51 @@ class BookingController extends TenantControllerBase
             'status' => 'required|in:pending,confirmed,cancelled,completed',
         ]);
 
+        if ($data['status'] === 'confirmed') {
+            $hasConfirmedOverlap = Booking::query()
+                ->where('tenant_id', $booking->tenant_id)
+                ->where('vehicle_id', $booking->vehicle_id)
+                ->where('status', 'confirmed')
+                ->where('id', '!=', $booking->id)
+                ->where(function ($q) use ($booking) {
+                    $q->whereBetween('start_date', [$booking->start_date, $booking->end_date])
+                        ->orWhereBetween('end_date', [$booking->start_date, $booking->end_date])
+                        ->orWhere(function ($inner) use ($booking) {
+                            $inner->where('start_date', '<=', $booking->start_date)
+                                ->where('end_date', '>=', $booking->end_date);
+                        });
+                })
+                ->exists();
+
+            if ($hasConfirmedOverlap) {
+                return back()->withErrors([
+                    'status' => 'Cannot confirm this booking because another confirmed booking overlaps the same vehicle dates.',
+                ]);
+            }
+        }
+
         $previousStatus = $booking->status;
         $booking->update(['status' => $data['status']]);
         $booking->refresh();
+
+        $vehicle = $booking->vehicle;
+        if ($vehicle) {
+            if ($booking->status === 'confirmed') {
+                if ($vehicle->status !== 'rented') {
+                    $vehicle->update(['status' => 'rented']);
+                }
+            } elseif ($previousStatus === 'confirmed') {
+                $hasAnyConfirmed = Booking::query()
+                    ->where('tenant_id', $booking->tenant_id)
+                    ->where('vehicle_id', $booking->vehicle_id)
+                    ->where('status', 'confirmed')
+                    ->exists();
+
+                if (! $hasAnyConfirmed && $vehicle->status === 'rented') {
+                    $vehicle->update(['status' => 'available']);
+                }
+            }
+        }
 
         $tenant = Auth::user()->tenant;
         if (

@@ -24,7 +24,7 @@
             <div>
                 <label class="block text-sm font-medium mb-1">Base Price (₱)</label>
                 <input type="number" step="0.01" min="0" name="base_price" value="{{ old('base_price', $plan->base_price) }}"
-                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Billing Period</label>
@@ -36,7 +36,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium mb-1">Discount Type</label>
-                <select name="discount_type" class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <select name="discount_type" class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">
                     @foreach(['none' => 'None', 'percent' => 'Percent (%)', 'fixed' => 'Fixed (₱)'] as $k => $label)
                         <option value="{{ $k }}" @selected(old('discount_type', $plan->discount_type) === $k)>{{ $label }}</option>
                     @endforeach
@@ -45,7 +45,7 @@
             <div>
                 <label class="block text-sm font-medium mb-1">Discount Value</label>
                 <input type="number" step="0.01" min="0" name="discount_value" value="{{ old('discount_value', $plan->discount_value) }}"
-                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">
                 <p class="mt-1 text-xs text-slate-400">If type is “None”, value is ignored.</p>
             </div>
         </div>
@@ -61,7 +61,7 @@
         </div>
 
         <div class="flex items-center justify-end gap-2 pt-2">
-            <button class="inline-flex items-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400">
+            <button class="rr-btn-primary inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold">
                 Save Changes
             </button>
         </div>

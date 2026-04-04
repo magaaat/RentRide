@@ -48,7 +48,7 @@
                     </td>
                     <td class="px-4 py-3">
                         @if($plan->is_active)
-                            <span class="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">Active</span>
+                            <span class="rr-chip-accent inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">Active</span>
                         @else
                             <span class="inline-flex items-center rounded-full bg-slate-500/20 px-2.5 py-0.5 text-xs font-semibold text-slate-300">Disabled</span>
                         @endif

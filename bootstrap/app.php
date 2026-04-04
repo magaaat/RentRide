@@ -24,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.feature' => \App\Http\Middleware\EnsureTenantHasFeature::class,
             'customer' => \App\Http\Middleware\EnsureUserIsCustomer::class,
             'tenant.domain.active' => \App\Http\Middleware\EnsureTenantDomainIsActive::class,
+            'tenant.user' => \App\Http\Middleware\EnsureUserIsTenantUser::class,
+            'tenant.admin' => \App\Http\Middleware\EnsureUserIsTenantAdmin::class,
+            'tenant.permission' => \App\Http\Middleware\EnsureUserHasPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

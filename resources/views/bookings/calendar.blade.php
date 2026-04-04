@@ -50,7 +50,7 @@
                 <div class="text-xs font-semibold {{ $isToday ? 'text-sky-300' : 'text-slate-400' }}">{{ $d }}</div>
                 <div class="mt-1 space-y-1">
                     @foreach($dayBookings->take(3) as $b)
-                        <div class="truncate rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-100" title="{{ $b->vehicle?->vehicle_name }} — {{ ucfirst($b->status) }}">
+                        <div class="truncate rounded bg-violet-500/15 px-1.5 py-0.5 text-[10px] text-violet-100" title="{{ $b->vehicle?->vehicle_name }} — {{ ucfirst($b->status) }}">
                             {{ $b->vehicle?->vehicle_name ?? 'Booking' }}
                         </div>
                     @endforeach

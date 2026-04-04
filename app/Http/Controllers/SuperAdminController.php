@@ -7,11 +7,13 @@ use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Mail\TenantApprovedMail;
+use App\Mail\TenantDomainUpdatedMail;
 use App\Models\PlanExtensionRequest;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Stancl\Tenancy\Database\Models\Tenant as TenancyTenant;
 use Stancl\Tenancy\Database\Models\Domain as TenancyDomain;
 use Illuminate\Support\Facades\DB;
@@ -70,13 +72,16 @@ class SuperAdminController extends Controller
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string',
             'subscription_plan' => 'required|in:basic,standard,premium',
-            'domain' => 'nullable|string|max:255',
+            'domain' => 'nullable|string|max:255|unique:tenants,domain',
         ]);
+
+        $data['domain'] = $this->normalizeDomainInput($data['domain'] ?? null);
 
         $temporaryPassword = $this->generateTemporaryPassword();
 
         $tenant = Tenant::create([
             'company_name' => $data['company_name'],
+            'slug' => $this->uniqueTenantSlug($data['company_name']),
             'owner_name' => $data['owner_name'],
             'email' => $data['email'],
             'phone' => $data['phone'],
@@ -89,7 +94,7 @@ class SuperAdminController extends Controller
         ]);
 
         if (! $tenant->domain) {
-            $tenant->domain = 'tenant'.$tenant->id.'.rentride.test';
+            $tenant->domain = $this->defaultTenantDomain($tenant);
             $tenant->save();
         }
 
@@ -158,21 +163,26 @@ class SuperAdminController extends Controller
     public function updateTenant(Request $request, Tenant $tenant)
     {
         $wasPending = $tenant->status === 'pending';
+        $previousDomain = $tenant->domain;
 
         $data = $request->validate([
             'company_name' => 'required|string|max:255',
             'subscription_plan' => 'required|in:basic,standard,premium',
             'subscription_expiry' => 'nullable|date',
-            'domain' => 'nullable|string|max:255',
+            'domain' => 'nullable|string|max:255|unique:tenants,domain,' . $tenant->id,
             'is_domain_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
             'status' => 'required|in:pending,approved',
         ]);
 
         $data['is_domain_active'] = $request->boolean('is_domain_active');
-        $data['is_featured'] = $request->boolean('is_featured');
+        $data['is_featured'] = $data['subscription_plan'] === 'premium' && $request->boolean('is_featured');
+        $data['domain'] = $this->normalizeDomainInput($data['domain'] ?? null);
 
         $tenant->update($data);
+        $tenant->slug = $this->uniqueTenantSlug($tenant->company_name, $tenant->id);
+        $tenant->save();
+        $domainChanged = $previousDomain !== $tenant->domain;
 
         // Ensure approved tenants always have an expiry date
         if ($tenant->status === 'approved' && ! $tenant->subscription_expiry) {
@@ -185,12 +195,25 @@ class SuperAdminController extends Controller
             $tenant->is_domain_active = true;
 
             if (! $tenant->domain) {
-                $tenant->domain = 'tenant'.$tenant->id.'.rentride.test';
+                $tenant->domain = $this->defaultTenantDomain($tenant);
             }
 
             $tenant->save();
 
             $this->provisionTenantInfrastructure($tenant);
+        }
+
+        if ($tenant->status === 'approved' && ($domainChanged || ($wasPending && $tenant->status === 'approved'))) {
+            $this->syncTenantDomainRouting($tenant, $previousDomain);
+        }
+
+        if (
+            $domainChanged
+            && ! $wasPending
+            && $tenant->status === 'approved'
+            && ! empty($tenant->domain)
+        ) {
+            Mail::to($tenant->email)->send(new TenantDomainUpdatedMail($tenant, $previousDomain));
         }
 
         return redirect()->route('superadmin.tenants.index')->with('success', 'Tenant updated.');
@@ -287,12 +310,55 @@ class SuperAdminController extends Controller
             }
         }
 
-        $tenancyTenant->data = array_merge($tenancyTenant->data ?? [], [
-            'database' => $dbName,
-        ]);
+        $tenantData = $tenancyTenant->data;
+        if (! is_array($tenantData)) {
+            $decoded = json_decode((string) $tenantData, true);
+            $tenantData = is_array($decoded) ? $decoded : [];
+        }
+        $tenantData['database'] = $dbName;
+        $tenancyTenant->data = $tenantData;
         $tenancyTenant->save();
 
         Mail::to($tenant->email)->send(new TenantApprovedMail($tenant, $domain, $temporaryPassword));
+    }
+
+    protected function syncTenantDomainRouting(Tenant $tenant, ?string $previousDomain = null): void
+    {
+        $tenancyTenant = TenancyTenant::firstOrCreate(
+            ['id' => (string) $tenant->id],
+            ['data' => ['company_name' => $tenant->company_name]]
+        );
+
+        $tenantData = $tenancyTenant->data;
+        if (! is_array($tenantData)) {
+            $decoded = json_decode((string) $tenantData, true);
+            $tenantData = is_array($decoded) ? $decoded : [];
+        }
+        $tenantData['database'] = 'tenant_' . $tenant->id;
+        $tenancyTenant->data = $tenantData;
+        $tenancyTenant->save();
+
+        if (! $tenant->domain) {
+            TenancyDomain::where('tenant_id', $tenancyTenant->id)->delete();
+            return;
+        }
+
+        if ($previousDomain) {
+            TenancyDomain::where('tenant_id', $tenancyTenant->id)
+                ->where('domain', $previousDomain)
+                ->delete();
+        }
+
+        TenancyDomain::where('tenant_id', $tenancyTenant->id)
+            ->where('domain', '!=', $tenant->domain)
+            ->delete();
+
+        if ($tenant->domain) {
+            TenancyDomain::firstOrCreate([
+                'tenant_id' => $tenancyTenant->id,
+                'domain' => $tenant->domain,
+            ]);
+        }
     }
 
     protected function generateTemporaryPassword(): string
@@ -307,6 +373,67 @@ class SuperAdminController extends Controller
         }
 
         return $password;
+    }
+
+    protected function defaultTenantDomain(Tenant $tenant): string
+    {
+        $baseDomain = env('TENANT_BASE_DOMAIN', 'localhost');
+        $baseDomain = ltrim(strtolower(trim((string) $baseDomain)), '.');
+
+        $slug = Str::slug((string) $tenant->company_name);
+        if ($slug === '') {
+            $slug = 'tenant' . $tenant->id;
+        }
+
+        $candidate = $slug . '.' . $baseDomain;
+
+        $collision = Tenant::where('domain', $candidate)
+            ->where('id', '!=', $tenant->id)
+            ->exists();
+
+        if ($collision) {
+            $candidate = $slug . '-' . $tenant->id . '.' . $baseDomain;
+        }
+
+        return $candidate;
+    }
+
+    protected function normalizeDomainInput(?string $domain): ?string
+    {
+        $domain = trim((string) $domain);
+        if ($domain === '') {
+            return null;
+        }
+
+        $candidate = preg_match('#^https?://#i', $domain) ? $domain : 'http://' . $domain;
+        $host = parse_url($candidate, PHP_URL_HOST);
+
+        if (is_string($host) && $host !== '') {
+            return strtolower($host);
+        }
+
+        return strtolower(trim(strtok($domain, '/')));
+    }
+
+    protected function uniqueTenantSlug(string $companyName, ?int $ignoreTenantId = null): string
+    {
+        $base = Str::slug($companyName);
+        if ($base === '') {
+            $base = 'tenant';
+        }
+
+        $slug = $base;
+        $i = 2;
+        while (
+            Tenant::where('slug', $slug)
+                ->when($ignoreTenantId !== null, fn ($q) => $q->where('id', '!=', $ignoreTenantId))
+                ->exists()
+        ) {
+            $slug = $base . '-' . $i;
+            $i++;
+        }
+
+        return $slug;
     }
 }
 

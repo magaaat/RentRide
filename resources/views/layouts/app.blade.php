@@ -1,58 +1,157 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <title>@yield('title', 'RentRide')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'rr': '0 4px 24px -4px rgba(15,23,42,0.12), 0 0 0 1px rgba(148,163,184,0.08)',
+                        'rr-sm': '0 2px 12px -2px rgba(15,23,42,0.1)',
+                    },
+                },
+            },
+        };
+    </script>
     <style>
         /*
-         * Avoid layout “jump” when switching routes: short pages hide the vertical scrollbar,
-         * long pages show it — the usable width changes and the sticky header looks like it shifts.
+         * Always reserve vertical scrollbar width so route changes don’t change the layout width.
+         * (Do not combine with SweetAlert’s scrollbar padding — use overflow-y here + default Swal padding.)
          */
         html {
-            scrollbar-gutter: stable;
+            overflow-y: scroll;
         }
-        /* SweetAlert2 — match RentRide slate + emerald UI */
+        /*
+         * Shared UI — forms & cards (works with Tailwind CDN; no Bootstrap)
+         */
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+        .rr-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--rr-text-secondary, #475569);
+            margin-bottom: 0.375rem;
+        }
+        .rr-label-sm {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--rr-text-muted, #64748b);
+            margin-bottom: 0.25rem;
+        }
+        .rr-input,
+        .rr-textarea,
+        select.rr-input {
+            width: 100%;
+            border-radius: 0.5rem;
+            border: 1px solid var(--rr-input-border, #d0d6e0);
+            background: var(--rr-input-bg, #ffffff);
+            color: var(--rr-text, #0f172a);
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .rr-input::placeholder,
+        .rr-textarea::placeholder {
+            color: var(--rr-text-placeholder, #94a3b8);
+        }
+        .rr-input:focus,
+        .rr-textarea:focus,
+        select.rr-input:focus {
+            outline: none;
+            border-color: var(--rr-accent);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--rr-accent) 28%, transparent);
+        }
+        .rr-textarea {
+            min-height: 5rem;
+            resize: vertical;
+        }
+        input[type="file"].rr-file {
+            display: block;
+            width: 100%;
+            font-size: 0.8125rem;
+            color: var(--rr-text-secondary, #475569);
+        }
+        input[type="file"].rr-file::file-selector-button {
+            margin-right: 0.75rem;
+            border-radius: 0.375rem;
+            border: 0;
+            background: var(--rr-surface-2, #f1f5f9);
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--rr-text, #0f172a);
+            cursor: pointer;
+        }
+        input[type="file"].rr-file::file-selector-button:hover {
+            background: color-mix(in srgb, var(--rr-text-muted, #64748b) 14%, var(--rr-surface-2, #f1f5f9));
+        }
+        .rr-panel {
+            border-radius: 0.75rem;
+            border: 1px solid var(--rr-border, #e2e8f0);
+            background: var(--rr-surface, #ffffff);
+            box-shadow: 0 4px 20px -10px rgba(15, 23, 42, 0.1);
+        }
+        .rr-panel-elevated {
+            border-radius: 0.75rem;
+            border: 1px solid var(--rr-border, #e2e8f0);
+            background: var(--rr-surface, #ffffff);
+            box-shadow: 0 12px 32px -16px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(148, 163, 184, 0.06);
+        }
+        /* SweetAlert2 — light theme to match app */
         .swal2-popup {
-            background: rgb(30 41 59 / 0.96) !important;
-            border: 1px solid rgb(51 65 85) !important;
+            background: var(--rr-surface, #ffffff) !important;
+            border: 1px solid var(--rr-border, #e2e8f0) !important;
             border-radius: 1rem !important;
-            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.55) !important;
-            color: #e2e8f0 !important;
+            box-shadow: 0 25px 50px -18px rgb(15 23 42 / 0.18), 0 0 0 1px rgba(148, 163, 184, 0.08) !important;
+            color: var(--rr-text, #0f172a) !important;
         }
         .swal2-title {
-            color: #f8fafc !important;
+            color: var(--rr-text, #0f172a) !important;
             font-weight: 600 !important;
         }
         .swal2-html-container,
         .swal2-content {
-            color: #cbd5e1 !important;
+            color: var(--rr-text-secondary, #475569) !important;
         }
         .swal2-close {
-            color: #94a3b8 !important;
+            color: var(--rr-text-muted, #64748b) !important;
         }
         .swal2-close:hover {
-            color: #e2e8f0 !important;
+            color: var(--rr-text, #0f172a) !important;
         }
         .swal2-confirm {
-            background: #10b981 !important;
+            background: var(--rr-accent) !important;
             color: #0f172a !important;
             border-radius: 0.5rem !important;
             font-weight: 600 !important;
             padding: 0.5rem 1.35rem !important;
             border: none !important;
-            box-shadow: 0 10px 15px -3px rgb(16 185 129 / 0.25) !important;
+            box-shadow: 0 10px 15px -5px color-mix(in srgb, var(--rr-accent) 35%, transparent) !important;
         }
         .swal2-confirm:focus {
-            box-shadow: 0 0 0 3px rgb(16 185 129 / 0.35) !important;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--rr-accent) 35%, transparent) !important;
         }
         .swal2-cancel {
-            background: rgb(51 65 85 / 0.9) !important;
-            color: #e2e8f0 !important;
-            border: 1px solid rgb(71 85 105) !important;
+            background: var(--rr-surface-2, #f1f5f9) !important;
+            color: var(--rr-text-secondary, #475569) !important;
+            border: 1px solid var(--rr-border, #e2e8f0) !important;
             border-radius: 0.5rem !important;
             font-weight: 600 !important;
         }
@@ -70,17 +169,16 @@
             color: #38bdf8 !important;
         }
         .swal2-timer-progress-bar {
-            background: #10b981 !important;
+            background: var(--rr-accent) !important;
         }
         .swal2-backdrop {
-            background: rgb(15 23 42 / 0.78) !important;
+            background: color-mix(in srgb, var(--rr-text, #0f172a) 38%, transparent) !important;
         }
         /*
          * Single-value selects: native OS arrow ignores padding — hide it and draw our own chevron
          * inset from the right edge so it doesn’t touch the border.
          */
-        select:not([multiple]):not([size]),
-        select.form-select:not([multiple]):not([size]) {
+        select:not([multiple]):not([size]) {
             -webkit-appearance: none !important;
             -moz-appearance: none !important;
             appearance: none !important;
@@ -94,21 +192,21 @@
     @stack('styles')
 </head>
 @php
-    // Theme customization should apply ONLY to tenant admins.
-    $theme = (auth()->check() && auth()->user()->isAdmin())
+    // Theme accent applies to tenant company users (admin + staff).
+    $theme = (auth()->check() && auth()->user()->isTenantUser())
         ? (auth()->user()->tenant?->theme ?? 'slate')
         : 'slate';
 
     $themes = [
         'slate' => [
-            'text' => 'text-slate-100',
-            'bg' => '#0f172a',      // slate-900
-            'surface' => '#111827', // slate-900/gray-900-ish
-            'surface2' => '#0b1220',// darker
-            'border' => '#1f2937',  // slate-800
-            'hover' => 'rgba(148,163,184,0.08)',
-            'head' => 'rgba(148,163,184,0.10)',
-            'headerBorder' => 'rgba(148,163,184,0.15)',
+            'text' => 'text-slate-800',
+            'bg' => '#f0f4f8',
+            'surface' => '#ffffff',
+            'surface2' => '#f1f5f9',
+            'border' => '#e2e8f0',
+            'hover' => 'rgba(30,41,59,0.045)',
+            'head' => 'rgba(148,163,184,0.12)',
+            'headerBorder' => 'rgba(148,163,184,0.22)',
             // Slate theme should feel "blue-gray", not green.
             'brand' => 'bg-sky-400 text-slate-950',
             'accentText' => 'text-sky-300',
@@ -171,7 +269,14 @@
         ],
     ];
 
-    $t = $themes[$theme] ?? $themes['slate'];
+    // Keep the overall app visual system consistent; tenant theme only controls accent/button color.
+    $selectedTheme = $themes[$theme] ?? $themes['slate'];
+    $t = $themes['slate'];
+    $t['brand'] = $selectedTheme['brand'];
+    $t['accentBg'] = $selectedTheme['accentBg'];
+    $t['accentBgHover'] = $selectedTheme['accentBgHover'];
+    $t['accentHex'] = $selectedTheme['accentHex'];
+    $t['accentHexHover'] = $selectedTheme['accentHexHover'];
 
     /**
      * Public entry pages: landing + login/register screens.
@@ -180,6 +285,18 @@
      */
     $isPublicEntryView = request()->is('/')
         || request()->routeIs('login', 'customer.login', 'customer.register', 'tenant.register', 'superadmin.login');
+
+    $host = request()->getHost();
+    $isCentralHost = in_array($host, config('tenancy.central_domains', []), true);
+    $headerTenant = null;
+
+    if (auth()->check() && auth()->user()->isTenantUser()) {
+        $headerTenant = auth()->user()->tenant;
+    } elseif (! $isCentralHost) {
+        $headerTenant = \App\Models\Tenant::where('domain', $host)->first();
+    }
+
+    $showRentRideBrand = request()->is('/') || request()->routeIs('superadmin.*', 'superadmin.login');
 @endphp
 <style>
     :root{
@@ -192,6 +309,18 @@
         --rr-header-border: {{ $t['headerBorder'] }};
         --rr-accent: {{ $t['accentHex'] }};
         --rr-accent-hover: {{ $t['accentHexHover'] }};
+        --rr-text: #0f172a;
+        --rr-text-secondary: #475569;
+        --rr-text-muted: #64748b;
+        --rr-text-placeholder: #94a3b8;
+        --rr-input-bg: #ffffff;
+        --rr-input-border: #d0d6e0;
+        --rr-nav-active-bg: color-mix(in srgb, var(--rr-accent) 11%, var(--rr-surface));
+        --rr-nav-active-border: color-mix(in srgb, var(--rr-accent) 28%, var(--rr-border));
+    }
+    /* Same as body — avoids a bright strip next to the scrollbar when modals lock scroll */
+    html {
+        background-color: var(--rr-bg);
     }
     .rr-surface { background-color: var(--rr-surface); }
     .rr-surface-2 { background-color: var(--rr-surface-2); }
@@ -205,13 +334,34 @@
         border: 1px solid transparent;
     }
     .rr-btn-primary:hover{ background: var(--rr-accent-hover); }
+    .rr-link-accent { color: var(--rr-accent); }
+    .rr-link-accent:hover { color: var(--rr-accent-hover); }
+    .rr-chip-accent {
+        background: color-mix(in srgb, var(--rr-accent) 16%, transparent);
+        color: color-mix(in srgb, var(--rr-accent) 82%, white 18%);
+        border: 1px solid color-mix(in srgb, var(--rr-accent) 38%, transparent);
+    }
 
     .rr-btn-secondary{
         background: var(--rr-surface-2);
-        color: #e2e8f0;
+        color: #334155;
         border: 1px solid var(--rr-border);
     }
-    .rr-btn-secondary:hover{ background: rgba(148,163,184,0.08); }
+    .rr-btn-secondary:hover{
+        background: color-mix(in srgb, var(--rr-accent) 8%, var(--rr-surface-2));
+        border-color: color-mix(in srgb, var(--rr-accent) 22%, var(--rr-border));
+    }
+
+    /* Main nav — active pill picks up tenant accent */
+    nav[aria-label="Main navigation"] a.bg-white {
+        background: var(--rr-nav-active-bg) !important;
+        border-color: var(--rr-nav-active-border) !important;
+        color: var(--rr-text) !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+    }
+    nav[aria-label="Main navigation"] a.border-transparent:hover {
+        background: color-mix(in srgb, var(--rr-accent) 6%, var(--rr-surface-2)) !important;
+    }
 
     /* Sub-nav: horizontal scroll — extra padding so dots/badges aren’t clipped */
     .rr-nav-mid {
@@ -231,21 +381,82 @@
     .rr-nav-pill .rr-nav-badge {
         z-index: 2;
     }
+
+    .rr-header-bar {
+        border-bottom: 1px solid var(--rr-header-border);
+        background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--rr-surface) 94%, transparent) 0%,
+            color-mix(in srgb, var(--rr-surface) 88%, var(--rr-bg)) 100%
+        );
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
 </style>
-<body class="min-h-screen {{ $t['text'] }}" style="background-color: var(--rr-bg);">
+<body class="min-h-screen font-sans {{ $t['text'] }}" style="background-color: var(--rr-bg); background-image: radial-gradient(ellipse 120% 80% at 50% -20%, color-mix(in srgb, var(--rr-accent) 7%, transparent), transparent 55%);">
+<style>
+    /* Light UI remap for pages still using dark Tailwind utility classes. */
+    [class*="text-slate-50"], [class*="text-slate-100"], [class*="text-slate-200"] { color: var(--rr-text) !important; }
+    [class*="text-slate-300"] { color: var(--rr-text-secondary) !important; }
+    [class*="text-slate-400"] { color: var(--rr-text-secondary) !important; }
+    [class*="text-slate-500"] { color: var(--rr-text-muted) !important; }
+    [class*="bg-slate-900"], [class*="bg-slate-950"], [class*="bg-slate-800"] { background-color: var(--rr-surface) !important; }
+    [class*="border-slate-700"], [class*="border-slate-800"], [class*="border-slate-600"] { border-color: var(--rr-border) !important; }
+    [class*="shadow-2xl"], [class*="shadow-xl"], [class*="shadow-lg"], [class*="shadow-rr"], [class*="shadow-rr-sm"] { box-shadow: 0 12px 32px -18px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(148, 163, 184, 0.06) !important; }
+
+    /* Consistent light tables across all modules */
+    table { color: var(--rr-text) !important; }
+    thead, .rr-table-head {
+        background: var(--rr-surface-2) !important;
+        color: var(--rr-text-secondary) !important;
+        border-bottom: 1px solid var(--rr-border) !important;
+    }
+    tbody tr, .rr-row-hover {
+        background: var(--rr-surface) !important;
+    }
+    tbody tr:hover, .rr-row-hover:hover {
+        background: color-mix(in srgb, var(--rr-accent) 4%, var(--rr-surface)) !important;
+    }
+    tbody, thead, tr, th, td {
+        border-color: var(--rr-border) !important;
+    }
+
+    /* Generic card/panel surfaces that may still carry dark utility combos */
+    .rounded-xl, .rounded-2xl, .rounded-3xl {
+        border-color: var(--rr-border);
+    }
+
+    /* Keep chips readable on white backgrounds */
+    [class*="bg-amber-500/"], [class*="bg-amber-400/"] { color: #92400e !important; border-color: #fcd34d !important; }
+    [class*="bg-rose-500/"] { color: #9f1239 !important; border-color: #fda4af !important; }
+    [class*="bg-emerald-500/"], [class*="bg-emerald-400/"] { color: #065f46 !important; border-color: #86efac !important; }
+    [class*="bg-sky-500/"] { color: #075985 !important; border-color: #7dd3fc !important; }
+    [class*="bg-fuchsia-500/"], [class*="bg-violet-500/"] { color: #5b21b6 !important; border-color: #c4b5fd !important; }
+</style>
 {{-- Top: slim header — logo + profile + logout only --}}
 <div class="sticky top-0 z-50">
-<header class="border-b backdrop-blur-md" style="border-color: var(--rr-header-border); background-color: rgba(2,6,23,0.95);">
+<header class="rr-header-bar backdrop-blur-md">
     <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        @if(request()->routeIs('superadmin.login'))
-            <a href="{{ url('/') }}" class="flex items-center gap-3 text-inherit no-underline">
-                <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl {{ $t['brand'] }} text-sm font-bold shadow-sm">R</span>
-                <span class="text-lg font-semibold tracking-tight">RentRide</span>
-            </a>
+        @if($showRentRideBrand || ! $headerTenant)
+            @if(request()->routeIs('superadmin.login'))
+                <a href="{{ url('/') }}" class="flex items-center gap-3 text-inherit no-underline">
+                    <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl {{ $t['brand'] }} text-sm font-bold shadow-sm">R</span>
+                    <span class="text-lg font-semibold tracking-tight">RentRide</span>
+                </a>
+            @else
+                <div class="flex min-w-0 items-center gap-3">
+                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl {{ $t['brand'] }} text-sm font-bold shadow-sm">R</span>
+                    <span class="truncate text-lg font-semibold tracking-tight">RentRide</span>
+                </div>
+            @endif
         @else
             <div class="flex min-w-0 items-center gap-3">
-                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl {{ $t['brand'] }} text-sm font-bold shadow-sm">R</span>
-                <span class="truncate text-lg font-semibold tracking-tight">RentRide</span>
+                @if(!empty($headerTenant->logo_path))
+                    <img src="{{ asset('storage/' . $headerTenant->logo_path) }}" alt="{{ $headerTenant->company_name }} logo" class="h-9 w-9 shrink-0 rounded-xl object-cover ring-1 ring-white/10 shadow-sm">
+                @else
+                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl {{ $t['brand'] }} text-sm font-bold shadow-sm">{{ strtoupper(substr($headerTenant->company_name, 0, 1)) }}</span>
+                @endif
+                <span class="truncate text-lg font-semibold tracking-tight">{{ $headerTenant->company_name }}</span>
             </div>
         @endif
 
@@ -255,7 +466,7 @@
                     {{-- Logged-in elsewhere in this browser: compact actions (not Super Admin Profile row) --}}
                     @if(auth()->user()->isSuperAdmin())
                         <a href="{{ route('superadmin.dashboard') }}" class="rr-nav-link rounded-lg border border-slate-600/80 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800/80 sm:text-sm">Open dashboard</a>
-                    @elseif(auth()->user()->isAdmin())
+                    @elseif(auth()->user()->isTenantUser())
                         <a href="{{ route('admin.dashboard') }}" class="rr-nav-link rounded-lg border border-slate-600/80 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800/80 sm:text-sm">Open dashboard</a>
                     @else
                         <a href="{{ route('customer.dashboard') }}" class="rr-nav-link rounded-lg border border-slate-600/80 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800/80 sm:text-sm">Open dashboard</a>
@@ -269,6 +480,8 @@
                         <a href="{{ route('superadmin.profile') }}" class="rr-nav-link max-w-[7rem] truncate rounded-lg border border-transparent px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-600 hover:bg-slate-800/50 sm:max-w-[10rem] sm:px-3 sm:text-sm" title="Profile">Profile</a>
                     @elseif(auth()->user()->isAdmin())
                         <a href="{{ route('admin.profile') }}" class="rr-nav-link max-w-[7rem] truncate rounded-lg border border-transparent px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-600 hover:bg-slate-800/50 sm:max-w-[10rem] sm:px-3 sm:text-sm" title="{{ auth()->user()->name }}">Profile</a>
+                    @elseif(auth()->user()->isTenantUser())
+                        <a href="{{ route('admin.dashboard') }}" class="rr-nav-link max-w-[7rem] truncate rounded-lg border border-transparent px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-600 hover:bg-slate-800/50 sm:max-w-[10rem] sm:px-3 sm:text-sm">Dashboard</a>
                     @else
                         @if(auth()->user()->isCustomer())
                             <a href="{{ route('customer.profile') }}" class="rr-nav-link max-w-[7rem] truncate rounded-lg border border-transparent px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-600 hover:bg-slate-800/50 sm:max-w-[10rem] sm:px-3 sm:text-sm">Profile</a>
@@ -295,24 +508,27 @@
             @php
                 $pendingExtCount = \App\Models\PlanExtensionRequest::where('status', 'pending')->count();
                 $pendingTenantAppsCount = \App\Models\Tenant::where('status', 'pending')->count();
+                $navActive = 'bg-white text-slate-900 border border-slate-200 shadow-sm';
+                $navIdle = 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent';
             @endphp
-            <a href="{{ route('superadmin.dashboard') }}" class="rr-nav-pill rr-nav-link shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.dashboard') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Dashboard</a>
-            <a href="{{ route('superadmin.tenants.index') }}" class="rr-nav-pill relative inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.tenants.*') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">
+            <a href="{{ route('superadmin.dashboard') }}" class="rr-nav-pill rr-nav-link shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.dashboard') ? $navActive : $navIdle }}">Dashboard</a>
+            <a href="{{ route('superadmin.tenants.index') }}" class="rr-nav-pill relative inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.tenants.*') ? $navActive : $navIdle }}">
                 Tenants
                 @if($pendingTenantAppsCount > 0)
-                    <span class="rr-nav-badge absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-slate-900" title="Pending applications"></span>
+                    <span class="rr-nav-badge absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" title="Pending applications"></span>
                 @endif
             </a>
-            <a href="{{ route('superadmin.plans.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.plans.*') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Plans</a>
-            <a href="{{ route('superadmin.extensions.index') }}" class="rr-nav-pill relative inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.extensions.*') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">
+            <a href="{{ route('superadmin.plans.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.plans.*') ? $navActive : $navIdle }}">Plans</a>
+            <a href="{{ route('superadmin.extensions.index') }}" class="rr-nav-pill relative inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.extensions.*') ? $navActive : $navIdle }}">
                 Extensions
                 @if($pendingExtCount > 0)
-                    <span class="rr-nav-badge absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-slate-900"></span>
+                    <span class="rr-nav-badge absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white"></span>
                 @endif
             </a>
-        @elseif(auth()->user()->isAdmin())
+        @elseif(auth()->user()->isTenantUser())
             @php
                 $tid = auth()->user()->tenant_id;
+                $tenantUser = auth()->user();
                 $tenantPendingBookingsCount = $tid
                     ? \App\Models\Booking::where('tenant_id', $tid)->where('status', 'pending')->count()
                     : 0;
@@ -325,38 +541,62 @@
                 $hasCal = $tn?->hasFeature(\App\Models\Tenant::FEATURE_BOOKING_CALENDAR);
                 $hasAnalytics = $tn?->hasFeature(\App\Models\Tenant::FEATURE_ADVANCED_ANALYTICS);
                 $hasPay = $tn?->hasFeature(\App\Models\Tenant::FEATURE_PAYMENT_TRACKING);
+                $canVehicles = $tenantUser->hasPermission('vehicles.manage');
+                $canMaint = $tenantUser->hasPermission('maintenance.manage');
+                $canCustomers = $tenantUser->hasPermission('customers.manage');
+                $canReports = $tenantUser->hasPermission('reports.view');
+                $canBookings = $tenantUser->hasPermission('bookings.manage');
+                $canPayments = $tenantUser->hasPermission('payments.manage');
+                $canStaff = $tenantUser->canManageStaff();
+                $navActive = 'bg-white text-slate-900 border border-slate-200 shadow-sm';
+                $navIdle = 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent';
             @endphp
-            <a href="{{ route('admin.dashboard') }}" class="rr-nav-pill relative inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.dashboard') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">
+            <a href="{{ route('admin.dashboard') }}" class="rr-nav-pill relative inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.dashboard') ? $navActive : $navIdle }}">
                 Dashboard
                 @if($tenantDashboardPending > 0)
-                    <span class="rr-nav-badge absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-slate-900" title="Needs attention"></span>
+                    <span class="rr-nav-badge absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" title="Needs attention"></span>
                 @endif
             </a>
-            <a href="{{ route('vehicles.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('vehicles.*') && !request()->routeIs('vehicles.maintenance') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Vehicles</a>
-            @if($hasMaint)
-                <a href="{{ route('vehicles.maintenance') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('vehicles.maintenance') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Maintenance</a>
+            @if($canVehicles)
+                <a href="{{ route('vehicles.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('vehicles.*') && !request()->routeIs('vehicles.maintenance') ? $navActive : $navIdle }}">Vehicles</a>
             @endif
-            <a href="{{ route('customers.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('customers.*') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Customers</a>
-            <a href="{{ route('tenant.reports') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('tenant.reports') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Reports</a>
-            @if($hasAnalytics)
-                <a href="{{ route('tenant.analytics') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('tenant.analytics') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Analytics</a>
+            @if($hasMaint && $canMaint)
+                <a href="{{ route('vehicles.maintenance') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('vehicles.maintenance') ? $navActive : $navIdle }}">Maintenance</a>
             @endif
-            <a href="{{ route('bookings.index') }}" class="rr-nav-pill inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('bookings.index', 'bookings.create', 'bookings.store', 'bookings.updateStatus') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">
-                <span>Bookings</span>
-                @if($tenantPendingBookingsCount > 0)
-                    <span class="rr-nav-badge ml-1 inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-slate-900">{{ $tenantPendingBookingsCount > 9 ? '9+' : $tenantPendingBookingsCount }}</span>
-                @endif
-            </a>
-            @if($hasCal)
-                <a href="{{ route('bookings.calendar') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('bookings.calendar') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Calendar</a>
+            @if($canCustomers)
+                <a href="{{ route('customers.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('customers.*') ? $navActive : $navIdle }}">Customers</a>
             @endif
-            @if($hasPay)
-                <a href="{{ route('payments.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('payments.*') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Payments</a>
+            @if($canReports)
+                <a href="{{ route('tenant.reports') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('tenant.reports') ? $navActive : $navIdle }}">Reports</a>
+            @endif
+            @if($hasAnalytics && $canReports)
+                <a href="{{ route('tenant.analytics') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('tenant.analytics') ? $navActive : $navIdle }}">Analytics</a>
+            @endif
+            @if($canBookings)
+                <a href="{{ route('bookings.index') }}" class="rr-nav-pill inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('bookings.index', 'bookings.create', 'bookings.store', 'bookings.updateStatus') ? $navActive : $navIdle }}">
+                    <span>Bookings</span>
+                    @if($tenantPendingBookingsCount > 0)
+                        <span class="rr-nav-badge ml-1 inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">{{ $tenantPendingBookingsCount > 9 ? '9+' : $tenantPendingBookingsCount }}</span>
+                    @endif
+                </a>
+            @endif
+            @if($hasCal && $canBookings)
+                <a href="{{ route('bookings.calendar') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('bookings.calendar') ? $navActive : $navIdle }}">Calendar</a>
+            @endif
+            @if($hasPay && $canPayments)
+                <a href="{{ route('payments.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('payments.*') ? $navActive : $navIdle }}">Payments</a>
+            @endif
+            @if($canStaff)
+                <a href="{{ route('admin.staff.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.staff.*') ? $navActive : $navIdle }}">Staff</a>
             @endif
         @else
-            <a href="{{ route('customer.dashboard') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('customer.dashboard') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Dashboard</a>
-            <a href="{{ route('customer.search') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('customer.search') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Search cars</a>
-            <a href="{{ route('customer.tenants.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('customer.tenants.*') ? 'bg-slate-700/80 ' . $t['accentText'] . ' ring-1 ring-white/10' : 'text-slate-300 hover:bg-slate-800/70 hover:text-slate-100' }}">Companies</a>
+            @php
+                $navActive = 'bg-white text-slate-900 border border-slate-200 shadow-sm';
+                $navIdle = 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent';
+            @endphp
+            <a href="{{ route('customer.dashboard') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('customer.dashboard') ? $navActive : $navIdle }}">Dashboard</a>
+            <a href="{{ route('customer.search') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('customer.search') ? $navActive : $navIdle }}">Search cars</a>
+            <a href="{{ route('customer.tenants.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('customer.tenants.*') ? $navActive : $navIdle }}">Companies</a>
         @endif
             </div>
         </div>
@@ -366,11 +606,10 @@
 @endauth
 </div>
 
-<main class="mx-auto max-w-6xl px-4 mb-10 pt-6">
+<main class="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 lg:max-w-7xl leading-relaxed">
     @yield('content')
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 @if(session('success'))
     <script>
@@ -408,6 +647,35 @@
         });
     </script>
 @endif
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!window.Swal) return;
+
+        document.querySelectorAll('form[data-confirm]').forEach((form) => {
+            form.addEventListener('submit', function (e) {
+                if (form.dataset.confirmed === '1') {
+                    return;
+                }
+
+                e.preventDefault();
+                Swal.fire({
+                    icon: form.dataset.confirmIcon || 'warning',
+                    title: form.dataset.confirmTitle || 'Are you sure?',
+                    text: form.dataset.confirmText || 'Please confirm this action.',
+                    showCancelButton: true,
+                    confirmButtonText: form.dataset.confirmButton || 'Yes, continue',
+                    cancelButtonText: form.dataset.cancelButton || 'Cancel',
+                    confirmButtonColor: form.dataset.confirmColor || '#dc2626',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.dataset.confirmed = '1';
+                        form.submit();
+                    }
+                });
+            });
+        });
+    });
+</script>
 @stack('scripts')
 </body>
 </html>

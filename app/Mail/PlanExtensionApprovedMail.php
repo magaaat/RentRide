@@ -18,7 +18,8 @@ class PlanExtensionApprovedMail extends Mailable
     public function build(): self
     {
         $tenant = $this->request->tenant;
-        $loginUrl = config('app.url') . '/login?tenant=' . $tenant->id;
+        $loginUrl = $tenant->tenantLoginUrl()
+            ?? route('login', ['tenant' => $tenant->slug ?: $tenant->id], absolute: true);
 
         return $this->subject('Your RentRide plan extension was approved')
             ->view('emails.plan-extension-approved')

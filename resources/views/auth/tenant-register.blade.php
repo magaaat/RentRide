@@ -12,31 +12,31 @@
                 <div>
                     <label class="block text-sm font-medium mb-1">Company Name</label>
                     <input type="text" name="company_name" value="{{ old('company_name') }}" required
-                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Owner Name</label>
                     <input type="text" name="owner_name" value="{{ old('owner_name') }}" required
-                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
                 </div>
             </div>
 
             <div>
                 <label class="block text-sm font-medium mb-1">Email</label>
                 <input type="email" name="email" value="{{ old('email') }}" required
-                       class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                       class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">Phone</label>
                     <input type="text" name="phone" value="{{ old('phone') }}" required
-                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Address</label>
                     <input type="text" name="address" value="{{ old('address') }}"
-                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
                 </div>
             </div>
 
@@ -44,12 +44,12 @@
                 <div>
                     <label class="block text-sm font-medium mb-1">Password</label>
                     <input type="password" name="password" required
-                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Confirm Password</label>
                     <input type="password" name="password_confirmation" required
-                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
                 </div>
             </div>
 
@@ -69,9 +69,9 @@
                 @endphp
                 <label class="block text-sm font-medium mb-2">Selected Plan</label>
                 <input type="hidden" name="plan" value="{{ $selectedPlan }}">
-                <div class="rounded-xl border border-emerald-500/60 bg-slate-900/60 px-4 py-3 text-sm flex items-center justify-between">
+                <div class="rounded-xl border border-violet-500/60 bg-slate-900/60 px-4 py-3 text-sm flex items-center justify-between">
                     <div>
-                        <div class="text-xs uppercase tracking-wide text-emerald-300/80">Plan</div>
+                        <div class="text-xs uppercase tracking-wide text-violet-300/80">Plan</div>
                         <div class="font-semibold">
                             {{ $plan?->name ?? ucfirst($selectedPlan) }}
                             <span class="text-slate-300 font-normal">
@@ -83,7 +83,7 @@
                             </span>
                         </div>
                     </div>
-                    <span class="inline-flex items-center rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-300">
+                    <span class="rr-chip-accent inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold">
                         @if($hasDiscount)
                             {{ $discountLabel }}
                         @else
@@ -94,8 +94,8 @@
             </div>
 
             <div class="flex items-center justify-between pt-2">
-                <a href="{{ url('/') }}" class="text-sm text-slate-300 hover:text-emerald-400 transition">← Back to Home</a>
-                <button class="inline-flex justify-center items-center rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-400 transition">
+                <a href="{{ url('/') }}" class="text-sm text-slate-300 hover:text-violet-300 transition">← Back to Home</a>
+                <button class="rr-btn-primary inline-flex justify-center items-center rounded-lg px-6 py-2.5 text-sm font-semibold shadow-lg transition">
                     Register
                 </button>
             </div>

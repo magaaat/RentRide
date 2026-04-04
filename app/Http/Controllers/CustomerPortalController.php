@@ -117,7 +117,11 @@ class CustomerPortalController extends Controller
         $this->ensureApprovedTenant($tenant);
         abort_unless((int) $vehicle->tenant_id === (int) $tenant->id, 404);
 
-        return view('customer.vehicle-show', compact('tenant', 'vehicle'));
+        $user = Auth::user();
+        $user?->refresh();
+        $canRent = $user?->hasDriverLicensePhotos() ?? false;
+
+        return view('customer.vehicle-show', compact('tenant', 'vehicle', 'canRent'));
     }
 
     public function storeBooking(Request $request, Tenant $tenant, Vehicle $vehicle)
@@ -126,6 +130,13 @@ class CustomerPortalController extends Controller
         abort_unless((int) $vehicle->tenant_id === (int) $tenant->id, 404);
 
         $user = Auth::user();
+        $user?->refresh();
+
+        if (! $user?->hasDriverLicensePhotos()) {
+            return redirect()
+                ->route('customer.profile')
+                ->withErrors(['license' => 'Upload the front and back of your driver’s license in your profile before booking.']);
+        }
 
         $data = $request->validate([
             'start_date' => ['required', 'date', 'after_or_equal:today'],

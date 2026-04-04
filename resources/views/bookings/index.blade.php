@@ -3,21 +3,24 @@
 @section('title', 'Bookings')
 
 @section('content')
-<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-    <h3 class="text-xl font-semibold">Bookings</h3>
+<div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">Bookings</h1>
+        <p class="mt-1 text-sm text-slate-400">Confirm reservations and update status.</p>
+    </div>
     <div class="flex flex-wrap gap-2">
         @if(auth()->user()->tenant?->hasFeature(\App\Models\Tenant::FEATURE_BOOKING_CALENDAR))
-            <a href="{{ route('bookings.calendar') }}" class="inline-flex items-center rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-800">
+            <a href="{{ route('bookings.calendar') }}" class="inline-flex items-center rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800">
                 Calendar
             </a>
         @endif
-        <a href="{{ route('bookings.create') }}" class="inline-flex items-center rounded-lg rr-btn-primary px-3 py-1.5 text-xs font-semibold">
-            Create Booking
+        <a href="{{ route('bookings.create') }}" class="inline-flex items-center rounded-lg rr-btn-primary px-4 py-2 text-sm font-semibold shadow-sm">
+            Create booking
         </a>
     </div>
 </div>
 
-<div class="overflow-hidden rounded-xl border rr-border rr-surface">
+<div class="overflow-hidden rounded-xl border rr-border rr-surface shadow-rr">
     <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
             <thead class="rr-table-head text-slate-200">
@@ -34,19 +37,34 @@
             @forelse($bookings as $booking)
                 <tr class="rr-row-hover">
                     <td class="px-4 py-3">{{ $booking->vehicle->vehicle_name ?? '-' }}</td>
-                    <td class="px-4 py-3">{{ $booking->customer->name ?? '-' }}</td>
+                    <td class="px-4 py-3">
+                        <div class="text-slate-200">{{ $booking->customer->name ?? '—' }}</div>
+                        @if($booking->customer)
+                            <a href="{{ route('customers.show', $booking->customer) }}" class="rr-link-accent mt-1 inline-block text-xs font-semibold">View profile</a>
+                        @endif
+                    </td>
                     <td class="px-4 py-3">{{ $booking->start_date->format('Y-m-d') }}</td>
                     <td class="px-4 py-3">{{ $booking->end_date->format('Y-m-d') }}</td>
                     <td class="px-4 py-3 capitalize">{{ $booking->status }}</td>
                     <td class="px-4 py-3 text-right">
-                        <form method="POST" action="{{ route('bookings.updateStatus', $booking) }}" class="inline-flex items-center gap-2">
+                        <form
+                            method="POST"
+                            action="{{ route('bookings.updateStatus', $booking) }}"
+                            class="inline-flex items-center gap-2"
+                            data-confirm
+                            data-confirm-icon="question"
+                            data-confirm-color="#7c3aed"
+                            data-confirm-title="Update booking status?"
+                            data-confirm-text="This may change vehicle availability and calendar visibility."
+                            data-confirm-button="Yes, update"
+                        >
                             @csrf
-                            <select name="status" class="rounded-lg border border-slate-700 bg-slate-950/40 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <select name="status" class="rounded-lg border border-slate-700 bg-slate-950/40 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">
                                 @foreach(['pending','confirmed','cancelled','completed'] as $status)
                                     <option value="{{ $status }}" @selected($booking->status === $status)>{{ ucfirst($status) }}</option>
                                 @endforeach
                             </select>
-                            <button class="inline-flex items-center rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-slate-700">
+                            <button class="rr-btn-primary inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold">
                                 Update
                             </button>
                         </form>

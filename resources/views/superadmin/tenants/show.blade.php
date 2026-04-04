@@ -3,8 +3,11 @@
 @section('title', 'Tenant Profile')
 
 @section('content')
-<div class="flex items-center justify-between mb-4">
-    <h3 class="text-xl font-semibold">Tenant Profile</h3>
+<div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-50">Tenant profile</h1>
+        <p class="mt-1 text-sm text-slate-400">Review details and manage subscription & domain.</p>
+    </div>
     <form method="POST" action="{{ route('superadmin.tenants.destroy', $tenant) }}" id="delete-tenant-form">
         @csrf
         @method('DELETE')
@@ -14,14 +17,14 @@
     </form>
 </div>
 
-<div class="mb-4 rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+<div class="rr-panel mb-6 p-5 sm:p-6">
     <h5 class="text-lg font-semibold mb-2">{{ $tenant->company_name }}</h5>
     <p class="mb-1 text-sm"><strong>Owner:</strong> {{ $tenant->owner_name }}</p>
     <p class="mb-1 text-sm"><strong>Email:</strong> {{ $tenant->email }}</p>
     <p class="mb-1 text-sm">
         <strong>Status:</strong>
         @if($tenant->status === 'approved')
-            <span class="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
+            <span class="rr-chip-accent inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">
                 Approved
             </span>
         @else
@@ -36,10 +39,20 @@
     <p class="mb-1 text-sm"><strong>Subscription Expiry:</strong>
         {{ $tenant->subscription_expiry ? $tenant->subscription_expiry->format('Y-m-d') : '-' }}
     </p>
-    <p class="mb-1 text-sm"><strong>Domain:</strong> {{ $tenant->domain ?? '-' }}</p>
+    <p class="mb-1 text-sm">
+        <strong>Domain:</strong>
+        @if($tenant->domain && ($tenantLoginUrl = $tenant->tenantLoginUrl()))
+            <a href="{{ $tenantLoginUrl }}" target="_blank" rel="noopener noreferrer" class="rr-link-accent font-medium underline underline-offset-2">{{ $tenant->domain }}</a>
+            <span class="ml-1 text-xs text-slate-500">(tenant login)</span>
+        @elseif($tenant->domain)
+            {{ $tenant->domain }}
+        @else
+            -
+        @endif
+    </p>
     <p class="mb-0 text-sm"><strong>Domain Status:</strong>
         @if($tenant->is_domain_active)
-            <span class="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
+            <span class="rr-chip-accent inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">
                 Active
             </span>
         @else
@@ -48,13 +61,15 @@
             </span>
         @endif
     </p>
-    <p class="mt-2 mb-0 text-sm"><strong>Homepage featured:</strong>
-        @if($tenant->is_featured ?? false)
-            <span class="text-emerald-300">Yes</span>
-        @else
-            <span class="text-slate-400">No</span>
-        @endif
-    </p>
+    @if($tenant->subscription_plan === 'premium')
+        <p class="mt-2 mb-0 text-sm"><strong>Homepage featured:</strong>
+            @if($tenant->is_featured ?? false)
+                <span class="text-violet-300">Yes</span>
+            @else
+                <span class="text-slate-400">No</span>
+            @endif
+        </p>
+    @endif
     <p class="mt-2 text-sm">
         <strong>Database Usage:</strong>
         <span class="text-slate-200">{{ number_format($dataUsedMb ?? 0, 2) }} MB</span>
@@ -70,7 +85,7 @@
             <div class="mt-2 flex items-center gap-2">
                 <form method="POST" action="{{ route('superadmin.extensions.approve', $pendingExtension) }}" class="approve-form inline-block">
                     @csrf
-                    <button class="inline-flex items-center rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600">
+                    <button class="rr-btn-primary inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold">
                         Approve
                     </button>
                 </form>
@@ -82,62 +97,63 @@
     @endif
 </div>
 
-<h5 class="mb-3">Update Tenant Settings</h5>
+<h2 class="mb-4 text-lg font-semibold text-slate-100">Update tenant settings</h2>
+<div class="rr-panel-elevated p-6 sm:p-8">
 <form method="POST" action="{{ route('superadmin.tenants.update', $tenant) }}">
     @csrf
     @method('PUT')
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <label class="form-label">Company Name</label>
-            <input type="text" name="company_name" class="form-control" value="{{ old('company_name', $tenant->company_name) }}" required>
+    <div class="mb-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="sm:col-span-2 xl:col-span-2">
+            <label class="rr-label" for="company_name">Company name</label>
+            <input id="company_name" type="text" name="company_name" value="{{ old('company_name', $tenant->company_name) }}" required class="rr-input">
         </div>
-        <div class="col-md-3">
-            <label class="form-label">Status</label>
-            <select name="status" class="form-select">
+        <div>
+            <label class="rr-label" for="status">Status</label>
+            <select id="status" name="status" class="rr-input">
                 <option value="pending" @selected($tenant->status === 'pending')>Pending</option>
                 <option value="approved" @selected($tenant->status === 'approved')>Approved</option>
             </select>
         </div>
-        <div class="col-md-3">
-            <label class="form-label">Subscription Plan</label>
-            <select name="subscription_plan" class="form-select">
+        <div>
+            <label class="rr-label" for="subscription_plan">Subscription plan</label>
+            <select id="subscription_plan" name="subscription_plan" class="rr-input">
                 @foreach(['basic','standard','premium'] as $plan)
                     <option value="{{ $plan }}" @selected($tenant->subscription_plan === $plan)>{{ ucfirst($plan) }}</option>
                 @endforeach
             </select>
         </div>
-        <div class="col-md-3">
-            <label class="form-label">Subscription Expiry</label>
-            <input type="date" name="subscription_expiry" class="form-control" value="{{ old('subscription_expiry', optional($tenant->subscription_expiry)->format('Y-m-d')) }}">
+        <div>
+            <label class="rr-label" for="subscription_expiry">Subscription expiry</label>
+            <input id="subscription_expiry" type="date" name="subscription_expiry" value="{{ old('subscription_expiry', optional($tenant->subscription_expiry)->format('Y-m-d')) }}" class="rr-input">
         </div>
     </div>
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <label class="form-label">Domain</label>
-            <input type="text" name="domain" class="form-control" value="{{ old('domain', $tenant->domain) }}" placeholder="e.g. tenant1.rentride.test">
+    <div class="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div>
+            <label class="rr-label" for="domain">Domain</label>
+            <input id="domain" type="text" name="domain" value="{{ old('domain', $tenant->domain) }}" placeholder="e.g. company.localhost" class="rr-input">
+            <p class="mt-1 text-xs text-slate-500">Use hostname only (no http:// and no :port). Example: company.localhost</p>
         </div>
-        <div class="col-md-6 d-flex align-items-center">
-            <div class="form-check mt-4">
-                <input class="form-check-input" type="checkbox" name="is_domain_active" id="is_domain_active" value="1" @checked($tenant->is_domain_active)>
-                <label class="form-check-label" for="is_domain_active">
-                    Domain enabled
-                </label>
-            </div>
-        </div>
-    </div>
-    <div class="row mb-3">
-        <div class="col-md-12">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="is_featured" id="is_featured" value="1" @checked(old('is_featured', $tenant->is_featured ?? false))>
-                <label class="form-check-label" for="is_featured">
-                    Featured on public homepage (Premium listings — shows company on landing page)
-                </label>
-            </div>
+        <div class="flex items-end pb-0.5">
+            <label class="flex cursor-pointer items-center gap-2.5" for="is_domain_active">
+                <input type="checkbox" name="is_domain_active" id="is_domain_active" value="1" @checked($tenant->is_domain_active)
+                    class="size-4 rounded border-slate-600 bg-slate-900 text-violet-500 focus:ring-violet-500">
+                <span class="text-sm text-slate-300">Domain enabled</span>
+            </label>
         </div>
     </div>
-    <button class="btn btn-primary">Save Changes</button>
-    <a href="{{ route('superadmin.tenants.index') }}" class="btn btn-secondary">Back to List</a>
+    <div id="featured-homepage-settings" class="mb-6 @unless(old('subscription_plan', $tenant->subscription_plan) === 'premium') hidden @endunless">
+        <label class="flex cursor-pointer items-start gap-3" for="is_featured">
+            <input type="checkbox" name="is_featured" id="is_featured" value="1" @checked(old('is_featured', ($tenant->subscription_plan === 'premium') && ($tenant->is_featured ?? false)))
+                class="mt-0.5 size-4 rounded border-slate-600 bg-slate-900 text-violet-500 focus:ring-violet-500">
+            <span class="text-sm leading-relaxed text-slate-300">Featured on public homepage (Premium only — shows company on landing page)</span>
+        </label>
+    </div>
+    <div class="flex flex-wrap gap-3">
+        <button type="submit" class="inline-flex items-center rounded-lg rr-btn-primary px-5 py-2.5 text-sm font-semibold shadow-sm">Save changes</button>
+        <a href="{{ route('superadmin.tenants.index') }}" class="inline-flex items-center rounded-lg rr-btn-secondary px-5 py-2.5 text-sm font-semibold">Back to list</a>
+    </div>
 </form>
+</div>
 
 @push('scripts')
     <script>
@@ -162,6 +178,20 @@
                     });
                 });
             }
+
+            const planSelect = document.getElementById('subscription_plan');
+            const featuredBlock = document.getElementById('featured-homepage-settings');
+            const featuredCb = document.getElementById('is_featured');
+            function syncFeaturedHomepageVisibility() {
+                if (!planSelect || !featuredBlock) return;
+                const premium = planSelect.value === 'premium';
+                featuredBlock.classList.toggle('hidden', !premium);
+                if (!premium && featuredCb) {
+                    featuredCb.checked = false;
+                }
+            }
+            planSelect?.addEventListener('change', syncFeaturedHomepageVisibility);
+            syncFeaturedHomepageVisibility();
 
             document.querySelectorAll('.approve-form').forEach(function (form) {
                 form.addEventListener('submit', function (e) {

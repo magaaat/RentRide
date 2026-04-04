@@ -3,14 +3,14 @@
 @section('title', 'Super Admin Profile')
 
 @section('content')
-<div class="flex items-center justify-between mb-4">
+<div class="mx-auto mb-4 w-full max-w-3xl">
     <div>
         <h3 class="text-xl font-semibold">Super Admin Profile</h3>
         <p class="text-sm text-slate-300">Update your account information.</p>
     </div>
 </div>
 
-<div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+<div class="mx-auto w-full max-w-3xl rounded-xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6">
     <form method="POST" action="{{ route('superadmin.profile.update') }}" class="space-y-4">
         @csrf
         @method('PUT')
@@ -19,12 +19,12 @@
             <div>
                 <label class="block text-sm font-medium mb-1">Name</label>
                 <input type="text" name="name" value="{{ old('name', $user->name) }}"
-                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Email</label>
                 <input type="email" name="email" value="{{ old('email', $user->email) }}"
-                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">
             </div>
         </div>
 
@@ -32,17 +32,17 @@
             <div>
                 <label class="block text-sm font-medium mb-1">New Password (optional)</label>
                 <input type="password" name="password"
-                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Confirm New Password</label>
                 <input type="password" name="password_confirmation"
-                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                       class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">
             </div>
         </div>
 
         <div class="flex items-center justify-end gap-2 pt-2">
-            <button class="inline-flex items-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400">
+            <button class="rr-btn-primary inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold">
                 Save Changes
             </button>
         </div>

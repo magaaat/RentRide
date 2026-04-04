@@ -3,14 +3,17 @@
 @section('title', 'Tenants')
 
 @section('content')
-<div class="flex items-center justify-between mb-4">
-    <h3 class="text-xl font-semibold">Tenants</h3>
-    <a href="{{ route('superadmin.tenants.create') }}" class="inline-flex items-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400">
+<div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+        <h1 class="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">Tenants</h1>
+        <p class="mt-1 text-sm text-slate-400">Approve applications and manage rental companies.</p>
+    </div>
+    <a href="{{ route('superadmin.tenants.create') }}" class="rr-btn-primary inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition">
         Add tenant
     </a>
 </div>
 
-<div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60">
+<div class="overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900/50 shadow-rr">
     <div class="overflow-x-auto">
         <table class="min-w-full text-sm">
             <thead class="bg-slate-800/80 text-slate-200">
@@ -33,7 +36,7 @@
                     <td class="px-4 py-3">{{ $tenant->email }}</td>
                     <td class="px-4 py-3">
                         @if($tenant->status === 'approved')
-                            <span class="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
+                            <span class="rr-chip-accent inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">
                                 Approved
                             </span>
                         @else
@@ -45,12 +48,18 @@
                     <td class="px-4 py-3 capitalize">
                         {{ $tenant->subscription_plan }}
                     </td>
-                    <td class="px-4 py-3">{{ $tenant->domain ?? '-' }}</td>
+                    <td class="px-4 py-3">
+                        @if($tenant->domain && ($u = $tenant->tenantLoginUrl()))
+                            <a href="{{ $u }}" target="_blank" rel="noopener noreferrer" class="rr-link-accent underline underline-offset-2">{{ $tenant->domain }}</a>
+                        @else
+                            {{ $tenant->domain ?? '-' }}
+                        @endif
+                    </td>
                     <td class="px-4 py-3">
                         @if($tenant->status !== 'approved' || ! $tenant->domain)
                             <span class="text-slate-400">-</span>
                         @elseif($tenant->is_domain_active)
-                            <span class="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-300">
+                            <span class="rr-chip-accent inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">
                                 Active
                             </span>
                         @else
