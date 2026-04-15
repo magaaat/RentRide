@@ -6,7 +6,7 @@
 <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
         <h1 class="text-2xl font-semibold tracking-tight text-slate-50">Tenant profile</h1>
-        <p class="mt-1 text-sm text-slate-400">Review details and manage subscription & domain.</p>
+        <p class="mt-1 text-sm text-slate-400">Tenant details</p>
     </div>
     <form method="POST" action="{{ route('superadmin.tenants.destroy', $tenant) }}" id="delete-tenant-form">
         @csrf
@@ -35,7 +35,7 @@
     </p>
     <p class="mb-1 text-sm"><strong>Phone:</strong> {{ $tenant->phone }}</p>
     <p class="mb-1 text-sm"><strong>Address:</strong> {{ $tenant->address }}</p>
-    <p class="mb-1 text-sm"><strong>Plan:</strong> {{ ucfirst($tenant->subscription_plan) }}</p>
+    <p class="mb-1 text-sm"><strong>Plan:</strong> {{ $planDisplayName ?? ucfirst($tenant->subscription_plan) }} <span class="text-xs text-slate-500">({{ $tenant->subscription_plan }})</span></p>
     <p class="mb-1 text-sm"><strong>Subscription Expiry:</strong>
         {{ $tenant->subscription_expiry ? $tenant->subscription_expiry->format('Y-m-d') : '-' }}
     </p>
@@ -61,8 +61,8 @@
             </span>
         @endif
     </p>
-    @if($tenant->subscription_plan === 'premium')
-        <p class="mt-2 mb-0 text-sm"><strong>Homepage featured:</strong>
+    @if($tenant->planTier() === 'premium')
+        <p class="mt-2 mb-0 text-sm"><strong>Featured on homepage:</strong>
             @if($tenant->is_featured ?? false)
                 <span class="text-violet-300">Yes</span>
             @else
@@ -70,11 +70,6 @@
             @endif
         </p>
     @endif
-    <p class="mt-2 text-sm">
-        <strong>Database Usage:</strong>
-        <span class="text-slate-200">{{ number_format($dataUsedMb ?? 0, 2) }} MB</span>
-        <span class="text-slate-400 text-xs">(DB: {{ $dbName ?? ('tenant_' . $tenant->id) }})</span>
-    </p>
     @if(!empty($pendingExtension))
         <div class="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 text-sm text-amber-200">
             <div class="font-semibold">Pending extension request</div>
@@ -102,6 +97,12 @@
 <form method="POST" action="{{ route('superadmin.tenants.update', $tenant) }}">
     @csrf
     @method('PUT')
+    @php
+        $selectedPlanKey = old('subscription_plan', $tenant->subscription_plan);
+        $selectedTier = optional($subscriptionPlans->firstWhere('key', $selectedPlanKey))->feature_tier
+            ?? optional($subscriptionPlans->firstWhere('key', $selectedPlanKey))->tier
+            ?? $tenant->planTier();
+    @endphp
     <div class="mb-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <div class="sm:col-span-2 xl:col-span-2">
             <label class="rr-label" for="company_name">Company name</label>
@@ -117,8 +118,10 @@
         <div>
             <label class="rr-label" for="subscription_plan">Subscription plan</label>
             <select id="subscription_plan" name="subscription_plan" class="rr-input">
-                @foreach(['basic','standard','premium'] as $plan)
-                    <option value="{{ $plan }}" @selected($tenant->subscription_plan === $plan)>{{ ucfirst($plan) }}</option>
+                @foreach($subscriptionPlans as $p)
+                    <option value="{{ $p->key }}" data-tier="{{ $p->feature_tier ?? $p->tier }}" @selected(old('subscription_plan', $tenant->subscription_plan) === $p->key)>
+                        {{ $p->name }} ({{ $p->key }})@if(!$p->is_active) — inactive @endif
+                    </option>
                 @endforeach
             </select>
         </div>
@@ -141,11 +144,11 @@
             </label>
         </div>
     </div>
-    <div id="featured-homepage-settings" class="mb-6 @unless(old('subscription_plan', $tenant->subscription_plan) === 'premium') hidden @endunless">
+    <div id="featured-homepage-settings" class="mb-6 @unless($selectedTier === 'premium') hidden @endunless">
         <label class="flex cursor-pointer items-start gap-3" for="is_featured">
-            <input type="checkbox" name="is_featured" id="is_featured" value="1" @checked(old('is_featured', ($tenant->subscription_plan === 'premium') && ($tenant->is_featured ?? false)))
+            <input type="checkbox" name="is_featured" id="is_featured" value="1" @checked(old('is_featured', ($selectedTier === 'premium') && ($tenant->is_featured ?? false)))
                 class="mt-0.5 size-4 rounded border-slate-600 bg-slate-900 text-violet-500 focus:ring-violet-500">
-            <span class="text-sm leading-relaxed text-slate-300">Featured on public homepage (Premium only — shows company on landing page)</span>
+            <span class="text-sm leading-relaxed text-slate-300">Featured on homepage (premium)</span>
         </label>
     </div>
     <div class="flex flex-wrap gap-3">
@@ -184,7 +187,9 @@
             const featuredCb = document.getElementById('is_featured');
             function syncFeaturedHomepageVisibility() {
                 if (!planSelect || !featuredBlock) return;
-                const premium = planSelect.value === 'premium';
+                const opt = planSelect.selectedOptions[0];
+                const tier = opt ? opt.getAttribute('data-tier') : '';
+                const premium = tier === 'premium';
                 featuredBlock.classList.toggle('hidden', !premium);
                 if (!premium && featuredCb) {
                     featuredCb.checked = false;

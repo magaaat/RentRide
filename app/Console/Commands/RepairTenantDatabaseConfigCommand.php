@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Tenant;
+use App\Support\TenantDatabaseName;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Stancl\Tenancy\Database\Models\Domain as TenancyDomain;
@@ -27,17 +28,11 @@ class RepairTenantDatabaseConfigCommand extends Command
                 ['data' => []]
             );
 
-            $data = $tenancyTenant->data;
-            if (! is_array($data)) {
-                $decoded = json_decode((string) $data, true);
-                $data = is_array($decoded) ? $decoded : [];
-            }
-
-            $data['database'] = 'tenant_' . $tenant->id;
-            $tenancyTenant->data = $data;
+            $storedDb = TenantDatabaseName::fromTenancyData($tenancyTenant) ?? TenantDatabaseName::generate((int) $tenant->id);
+            TenantDatabaseName::setOnTenancyTenant($tenancyTenant, $storedDb);
             $tenancyTenant->save();
 
-            $dbName = 'tenant_' . $tenant->id;
+            $dbName = $storedDb;
             $centralDb = env('DB_DATABASE', 'rentride');
             $tablesToClone = ['users', 'vehicles', 'customers', 'bookings', 'payments'];
 
@@ -50,6 +45,25 @@ class RepairTenantDatabaseConfigCommand extends Command
             foreach ($tablesToClone as $table) {
                 try {
                     DB::statement("CREATE TABLE IF NOT EXISTS `$dbName`.`$table` LIKE `$centralDb`.`$table`");
+                } catch (\Throwable $e) {
+                    // Best effort only.
+                }
+            }
+
+            $encryptionSchemaStatements = [
+                "ALTER TABLE `$dbName`.`customers` MODIFY `name` TEXT NOT NULL",
+                "ALTER TABLE `$dbName`.`customers` MODIFY `email` TEXT NULL",
+                "ALTER TABLE `$dbName`.`customers` MODIFY `phone` TEXT NULL",
+                "ALTER TABLE `$dbName`.`customers` MODIFY `address` TEXT NULL",
+                "ALTER TABLE `$dbName`.`users` MODIFY `name` TEXT NOT NULL",
+                "ALTER TABLE `$dbName`.`users` MODIFY `phone` TEXT NULL",
+                "ALTER TABLE `$dbName`.`users` MODIFY `address` TEXT NULL",
+                "ALTER TABLE `$dbName`.`users` MODIFY `driver_license_front_path` TEXT NULL",
+                "ALTER TABLE `$dbName`.`users` MODIFY `driver_license_back_path` TEXT NULL",
+            ];
+            foreach ($encryptionSchemaStatements as $sql) {
+                try {
+                    DB::statement($sql);
                 } catch (\Throwable $e) {
                     // Best effort only.
                 }

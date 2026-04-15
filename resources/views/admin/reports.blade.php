@@ -5,7 +5,7 @@
 @section('content')
 <div class="mb-6">
     <h3 class="text-xl font-semibold">Rental reports</h3>
-    <p class="text-sm text-slate-400">Overview for your fleet and bookings (all plans).</p>
+    <p class="text-sm text-slate-400">Overview for your fleet and bookings.</p>
 </div>
 
 <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

@@ -7,15 +7,17 @@ use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Support\TenantDatabaseName;
 use DateTimeInterface;
+use Illuminate\Contracts\Encryption\EncryptException;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Mirrors tenant-scoped rows from the central DB into each tenant's own database
- * (created on tenant approval: tenant_{id} in MySQL).
+ * Mirrors tenant-scoped rows from the central DB into each tenant's own database.
  *
  * The main app always writes to the central database first; this service copies
  * the same rows so tools inspecting tenant_* DBs see the data.
@@ -23,6 +25,10 @@ use Throwable;
 class TenantDataMirror
 {
     protected const CONNECTION = 'tenant_data_mirror';
+    protected const ENCRYPTED_COLUMNS = [
+        'customers' => ['name', 'email', 'phone', 'address'],
+        'users' => ['name', 'phone', 'address', 'driver_license_front_path', 'driver_license_back_path'],
+    ];
 
     public function __construct()
     {
@@ -35,7 +41,7 @@ class TenantDataMirror
 
     public function tenantDatabaseName(int $tenantId): string
     {
-        return 'tenant_'.$tenantId;
+        return TenantDatabaseName::forTenantId($tenantId);
     }
 
     public function tenantDatabaseExists(string $databaseName): bool
@@ -254,14 +260,36 @@ class TenantDataMirror
     protected function normalizeRow($model): array
     {
         $row = [];
+        $table = $model->getTable();
+        $encryptedColumns = self::ENCRYPTED_COLUMNS[$table] ?? [];
+
         foreach ($model->getAttributes() as $key => $value) {
             if ($value instanceof DateTimeInterface) {
                 $row[$key] = $value->format('Y-m-d H:i:s');
             } else {
                 $row[$key] = $value;
             }
+
+            if (in_array($key, $encryptedColumns, true)) {
+                $row[$key] = $this->encryptValue($row[$key]);
+            }
         }
 
         return $row;
+    }
+
+    protected function encryptValue(mixed $value): mixed
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        try {
+            return Crypt::encryptString((string) $value);
+        } catch (EncryptException $e) {
+            Log::warning('TenantDataMirror: failed to encrypt value', ['e' => $e->getMessage()]);
+
+            return $value;
+        }
     }
 }

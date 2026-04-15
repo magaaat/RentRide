@@ -11,18 +11,18 @@ use App\Services\TenantDataMirror;
 use Illuminate\Console\Command;
 
 /**
- * Backfill tenant_* MySQL databases from central data (for rows created before mirroring ran).
+ * Backfill tenant MySQL mirror databases from central data.
  */
 class MirrorTenantDataCommand extends Command
 {
     protected $signature = 'tenant:mirror-sync {tenant_id? : Optional tenant ID}';
 
-    protected $description = 'Copy central tenant data into each tenant MySQL database (tenant_{id})';
+    protected $description = 'Copy central tenant data into each tenant MySQL mirror database';
 
     public function handle(TenantDataMirror $mirror): int
     {
         if (! $mirror->isEnabled()) {
-            $this->warn('Mirroring only runs when DB_CONNECTION=mysql and tenant_* databases exist.');
+            $this->warn('Mirroring only runs when DB_CONNECTION=mysql and tenant mirror databases exist.');
 
             return self::SUCCESS;
         }

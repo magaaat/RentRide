@@ -15,16 +15,18 @@ use App\Http\Controllers\TenantReportController;
 use App\Http\Controllers\BookingCalendarController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\TenantUserProfileController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
 
 Route::get('/', function () {
-    $plans = SubscriptionPlan::where('is_active', true)
-        ->orderByRaw("FIELD(`key`, 'basic', 'standard', 'premium')")
-        ->get()
-        ->keyBy('key');
+    $plans = SubscriptionPlan::where('show_on_landing', true)
+        ->orderBy('sort_order')
+        ->orderBy('id')
+        ->get();
 
     $mostSubscribedPlan = Tenant::where('status', 'approved')
         ->selectRaw('subscription_plan, COUNT(*) as cnt')
@@ -32,9 +34,13 @@ Route::get('/', function () {
         ->orderByDesc('cnt')
         ->value('subscription_plan');
 
+    $premiumPlanKeys = SubscriptionPlan::query()
+        ->where('feature_tier', 'premium')
+        ->pluck('key');
+
     $featuredTenants = Tenant::where('status', 'approved')
         ->where('is_domain_active', true)
-        ->where('subscription_plan', 'premium')
+        ->whereIn('subscription_plan', $premiumPlanKeys)
         ->where('is_featured', true)
         ->orderBy('company_name')
         ->limit(8)
@@ -75,6 +81,7 @@ Route::post('/register-customer', [AuthController::class, 'registerCustomer'])->
 Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
     // Super admin routes (role-checked inside controller)
     Route::get('/superadmin/dashboard', [DashboardController::class, 'superAdmin'])->name('superadmin.dashboard');
+    Route::get('/superadmin/about', [SupportController::class, 'superAdminAbout'])->name('superadmin.about');
     Route::get('/superadmin/tenants', [SuperAdminController::class, 'tenantsIndex'])->name('superadmin.tenants.index');
     Route::get('/superadmin/tenants/create', [SuperAdminController::class, 'createTenant'])->name('superadmin.tenants.create');
     Route::post('/superadmin/tenants', [SuperAdminController::class, 'storeTenant'])->name('superadmin.tenants.store');
@@ -83,8 +90,11 @@ Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
     Route::put('/superadmin/tenants/{tenant}', [SuperAdminController::class, 'updateTenant'])->name('superadmin.tenants.update');
     Route::delete('/superadmin/tenants/{tenant}', [SuperAdminController::class, 'destroyTenant'])->name('superadmin.tenants.destroy');
     Route::get('/superadmin/plans', [SuperAdminPlanController::class, 'index'])->name('superadmin.plans.index');
+    Route::get('/superadmin/plans/create', [SuperAdminPlanController::class, 'create'])->name('superadmin.plans.create');
+    Route::post('/superadmin/plans', [SuperAdminPlanController::class, 'store'])->name('superadmin.plans.store');
     Route::get('/superadmin/plans/{plan}/edit', [SuperAdminPlanController::class, 'edit'])->name('superadmin.plans.edit');
     Route::put('/superadmin/plans/{plan}', [SuperAdminPlanController::class, 'update'])->name('superadmin.plans.update');
+    Route::delete('/superadmin/plans/{plan}', [SuperAdminPlanController::class, 'destroy'])->name('superadmin.plans.destroy');
     Route::get('/superadmin/profile', [SuperAdminController::class, 'profile'])->name('superadmin.profile');
     Route::put('/superadmin/profile', [SuperAdminController::class, 'updateProfile'])->name('superadmin.profile.update');
 
@@ -95,10 +105,14 @@ Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
 
     // Rental tenant users (Admin + Staff)
     Route::middleware('tenant.user')->group(function () {
+        Route::get('/admin/my-profile', [TenantUserProfileController::class, 'edit'])->name('tenant.staff-profile');
+        Route::put('/admin/my-profile', [TenantUserProfileController::class, 'update'])->name('tenant.staff-profile.update');
+
         Route::get('/admin/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
+        Route::get('/admin/about', [SupportController::class, 'tenantAbout'])->name('admin.about');
 
         Route::get('/admin/reports', [TenantReportController::class, 'index'])
-            ->middleware('tenant.permission:reports.view')
+            ->middleware(['tenant.permission:reports.view', 'tenant.feature:sales_dashboard'])
             ->name('tenant.reports');
         Route::get('/admin/analytics', [TenantReportController::class, 'analytics'])
             ->middleware(['tenant.permission:reports.view', 'tenant.feature:advanced_analytics'])

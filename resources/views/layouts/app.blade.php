@@ -192,10 +192,34 @@
     @stack('styles')
 </head>
 @php
-    // Theme accent applies to tenant company users (admin + staff).
-    $theme = (auth()->check() && auth()->user()->isTenantUser())
-        ? (auth()->user()->tenant?->theme ?? 'slate')
-        : 'slate';
+    $host = request()->getHost();
+    $isCentralHost = in_array($host, config('tenancy.central_domains', []), true);
+    $headerTenant = null;
+    if (auth()->check() && auth()->user()->isTenantUser()) {
+        $headerTenant = auth()->user()->tenant;
+    } elseif (! $isCentralHost) {
+        $headerTenant = \App\Models\Tenant::where('domain', $host)->first();
+    } elseif (request()->filled('tenant')) {
+        $tk = trim((string) request()->query('tenant'));
+        if ($tk !== '') {
+            if (ctype_digit($tk)) {
+                $headerTenant = \App\Models\Tenant::find((int) $tk);
+            } else {
+                $slug = \Illuminate\Support\Str::slug($tk);
+                if ($slug !== '') {
+                    $headerTenant = \App\Models\Tenant::where('slug', $slug)->first();
+                }
+            }
+        }
+    }
+
+    // Theme accent: logged-in tenant users, or guest pages branded to a tenant (login on tenant domain / ?tenant=).
+    $theme = 'slate';
+    if (auth()->check() && auth()->user()->isTenantUser()) {
+        $theme = auth()->user()->tenant?->theme ?? 'slate';
+    } elseif ($headerTenant) {
+        $theme = $headerTenant->theme ?? 'slate';
+    }
 
     $themes = [
         'slate' => [
@@ -284,17 +308,7 @@
      * still show Profile/Logout on /login, /customer/login, etc. Here we use a compact header instead.
      */
     $isPublicEntryView = request()->is('/')
-        || request()->routeIs('login', 'customer.login', 'customer.register', 'tenant.register', 'superadmin.login');
-
-    $host = request()->getHost();
-    $isCentralHost = in_array($host, config('tenancy.central_domains', []), true);
-    $headerTenant = null;
-
-    if (auth()->check() && auth()->user()->isTenantUser()) {
-        $headerTenant = auth()->user()->tenant;
-    } elseif (! $isCentralHost) {
-        $headerTenant = \App\Models\Tenant::where('domain', $host)->first();
-    }
+        || request()->routeIs('login', 'customer.login', 'customer.register', 'tenant.register', 'superadmin.login', 'tenant.login', 'tenant.password.request', 'tenant.password.reset.verify', 'tenant.password.reset');
 
     $showRentRideBrand = request()->is('/') || request()->routeIs('superadmin.*', 'superadmin.login');
 @endphp
@@ -480,8 +494,8 @@
                         <a href="{{ route('superadmin.profile') }}" class="rr-nav-link max-w-[7rem] truncate rounded-lg border border-transparent px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-600 hover:bg-slate-800/50 sm:max-w-[10rem] sm:px-3 sm:text-sm" title="Profile">Profile</a>
                     @elseif(auth()->user()->isAdmin())
                         <a href="{{ route('admin.profile') }}" class="rr-nav-link max-w-[7rem] truncate rounded-lg border border-transparent px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-600 hover:bg-slate-800/50 sm:max-w-[10rem] sm:px-3 sm:text-sm" title="{{ auth()->user()->name }}">Profile</a>
-                    @elseif(auth()->user()->isTenantUser())
-                        <a href="{{ route('admin.dashboard') }}" class="rr-nav-link max-w-[7rem] truncate rounded-lg border border-transparent px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-600 hover:bg-slate-800/50 sm:max-w-[10rem] sm:px-3 sm:text-sm">Dashboard</a>
+                    @elseif(auth()->user()->isStaff())
+                        <a href="{{ route('tenant.staff-profile') }}" class="rr-nav-link max-w-[7rem] truncate rounded-lg border border-transparent px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-600 hover:bg-slate-800/50 sm:max-w-[10rem] sm:px-3 sm:text-sm" title="Profile">Profile</a>
                     @else
                         @if(auth()->user()->isCustomer())
                             <a href="{{ route('customer.profile') }}" class="rr-nav-link max-w-[7rem] truncate rounded-lg border border-transparent px-2.5 py-1.5 text-xs text-slate-300 hover:border-slate-600 hover:bg-slate-800/50 sm:max-w-[10rem] sm:px-3 sm:text-sm">Profile</a>
@@ -525,6 +539,7 @@
                     <span class="rr-nav-badge absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white"></span>
                 @endif
             </a>
+            <a href="{{ route('superadmin.about') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.about') ? $navActive : $navIdle }}">About</a>
         @elseif(auth()->user()->isTenantUser())
             @php
                 $tid = auth()->user()->tenant_id;
@@ -539,6 +554,7 @@
                 $tn = auth()->user()->tenant;
                 $hasMaint = $tn?->hasFeature(\App\Models\Tenant::FEATURE_MAINTENANCE_TRACKING);
                 $hasCal = $tn?->hasFeature(\App\Models\Tenant::FEATURE_BOOKING_CALENDAR);
+                $hasSalesDashboard = $tn?->hasFeature(\App\Models\Tenant::FEATURE_SALES_DASHBOARD);
                 $hasAnalytics = $tn?->hasFeature(\App\Models\Tenant::FEATURE_ADVANCED_ANALYTICS);
                 $hasPay = $tn?->hasFeature(\App\Models\Tenant::FEATURE_PAYMENT_TRACKING);
                 $canVehicles = $tenantUser->hasPermission('vehicles.manage');
@@ -566,7 +582,7 @@
             @if($canCustomers)
                 <a href="{{ route('customers.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('customers.*') ? $navActive : $navIdle }}">Customers</a>
             @endif
-            @if($canReports)
+            @if($hasSalesDashboard && $canReports)
                 <a href="{{ route('tenant.reports') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('tenant.reports') ? $navActive : $navIdle }}">Reports</a>
             @endif
             @if($hasAnalytics && $canReports)
@@ -589,6 +605,7 @@
             @if($canStaff)
                 <a href="{{ route('admin.staff.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.staff.*') ? $navActive : $navIdle }}">Staff</a>
             @endif
+            <a href="{{ route('admin.about') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.about') ? $navActive : $navIdle }}">About</a>
         @else
             @php
                 $navActive = 'bg-white text-slate-900 border border-slate-200 shadow-sm';
@@ -652,11 +669,7 @@
         if (!window.Swal) return;
 
         document.querySelectorAll('form[data-confirm]').forEach((form) => {
-            form.addEventListener('submit', function (e) {
-                if (form.dataset.confirmed === '1') {
-                    return;
-                }
-
+            form.addEventListener('submit', function onConfirmSubmit(e) {
                 e.preventDefault();
                 Swal.fire({
                     icon: form.dataset.confirmIcon || 'warning',
@@ -667,10 +680,12 @@
                     cancelButtonText: form.dataset.cancelButton || 'Cancel',
                     confirmButtonColor: form.dataset.confirmColor || '#dc2626',
                 }).then((result) => {
-                    if (result.isConfirmed) {
-                        form.dataset.confirmed = '1';
-                        form.submit();
+                    if (!result.isConfirmed) {
+                        return;
                     }
+                    /* Remove handler so submit() is a real native submit (includes _token). Re-attaching dataset + submit() can 419 in some browsers. */
+                    form.removeEventListener('submit', onConfirmSubmit);
+                    form.submit();
                 });
             });
         });

@@ -14,9 +14,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use App\Support\TenantDatabaseName;
 use Stancl\Tenancy\Database\Models\Tenant as TenancyTenant;
 use Stancl\Tenancy\Database\Models\Domain as TenancyDomain;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class SuperAdminController extends Controller
 {
@@ -55,7 +57,8 @@ class SuperAdminController extends Controller
         abort_unless(Auth::user()?->isSuperAdmin(), 403);
 
         $plans = SubscriptionPlan::where('is_active', true)
-            ->orderByRaw("FIELD(`key`, 'basic', 'standard', 'premium')")
+            ->orderBy('sort_order')
+            ->orderBy('id')
             ->get();
 
         return view('superadmin.tenants.create', compact('plans'));
@@ -71,11 +74,18 @@ class SuperAdminController extends Controller
             'email' => 'required|email|unique:tenants,email|unique:users,email',
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string',
-            'subscription_plan' => 'required|in:basic,standard,premium',
+            'subscription_plan' => ['required', Rule::exists('subscription_plans', 'key')],
             'domain' => 'nullable|string|max:255|unique:tenants,domain',
         ]);
 
         $data['domain'] = $this->normalizeDomainInput($data['domain'] ?? null);
+
+        $planCheck = SubscriptionPlan::where('key', $data['subscription_plan'])->first();
+        if (! $planCheck || ! $planCheck->is_active) {
+            return back()
+                ->withErrors(['subscription_plan' => 'Selected plan is not available.'])
+                ->withInput();
+        }
 
         $temporaryPassword = $this->generateTemporaryPassword();
 
@@ -128,29 +138,24 @@ class SuperAdminController extends Controller
             $tenant->update(['is_domain_active' => false]);
         }
 
-        // Compute tenant DB usage (best-effort)
-        $dbName = 'tenant_' . $tenant->id;
-        $bytes = 0;
-        try {
-            $row = DB::selectOne(
-                'SELECT COALESCE(SUM(data_length + index_length), 0) AS bytes
-                 FROM information_schema.tables
-                 WHERE table_schema = ?',
-                [$dbName]
-            );
-            $bytes = (int) ($row->bytes ?? 0);
-        } catch (\Throwable $e) {
-            $bytes = 0;
-        }
-
-        $dataUsedMb = round($bytes / 1024 / 1024, 2);
-
         $pendingExtension = PlanExtensionRequest::where('tenant_id', $tenant->id)
             ->where('status', 'pending')
             ->latest()
             ->first();
 
-        return view('superadmin.tenants.show', compact('tenant', 'dbName', 'dataUsedMb', 'pendingExtension'));
+        $subscriptionPlans = SubscriptionPlan::query()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $planDisplayName = SubscriptionPlan::where('key', $tenant->subscription_plan)->value('name');
+
+        return view('superadmin.tenants.show', compact(
+            'tenant',
+            'pendingExtension',
+            'subscriptionPlans',
+            'planDisplayName'
+        ));
     }
 
     public function editTenant(Tenant $tenant)
@@ -167,7 +172,7 @@ class SuperAdminController extends Controller
 
         $data = $request->validate([
             'company_name' => 'required|string|max:255',
-            'subscription_plan' => 'required|in:basic,standard,premium',
+            'subscription_plan' => ['required', Rule::exists('subscription_plans', 'key')],
             'subscription_expiry' => 'nullable|date',
             'domain' => 'nullable|string|max:255|unique:tenants,domain,' . $tenant->id,
             'is_domain_active' => 'nullable|boolean',
@@ -176,7 +181,8 @@ class SuperAdminController extends Controller
         ]);
 
         $data['is_domain_active'] = $request->boolean('is_domain_active');
-        $data['is_featured'] = $data['subscription_plan'] === 'premium' && $request->boolean('is_featured');
+        $planRow = SubscriptionPlan::where('key', $data['subscription_plan'])->first();
+        $data['is_featured'] = ($planRow && ($planRow->feature_tier ?? $planRow->tier) === 'premium' && $request->boolean('is_featured'));
         $data['domain'] = $this->normalizeDomainInput($data['domain'] ?? null);
 
         $tenant->update($data);
@@ -230,7 +236,7 @@ class SuperAdminController extends Controller
 
         // Optional: drop tenant MySQL database created on approval
         try {
-            $dbName = 'tenant_' . $tenant->id;
+            $dbName = TenantDatabaseName::forTenantId((int) $tenant->id);
             DB::statement("DROP DATABASE IF EXISTS `$dbName`");
         } catch (\Throwable $e) {
             // SQLite / permission / missing DB — ignore
@@ -291,7 +297,7 @@ class SuperAdminController extends Controller
             'domain' => $domain,
         ]);
 
-        $dbName = 'tenant_'.$tenant->id;
+        $dbName = TenantDatabaseName::forTenantId((int) $tenant->id);
 
         try {
             DB::statement("CREATE DATABASE IF NOT EXISTS `$dbName` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
@@ -310,16 +316,35 @@ class SuperAdminController extends Controller
             }
         }
 
-        $tenantData = $tenancyTenant->data;
-        if (! is_array($tenantData)) {
-            $decoded = json_decode((string) $tenantData, true);
-            $tenantData = is_array($decoded) ? $decoded : [];
-        }
-        $tenantData['database'] = $dbName;
-        $tenancyTenant->data = $tenantData;
+        $this->applyTenantMirrorEncryptionSchema($dbName);
+
+        TenantDatabaseName::setOnTenancyTenant($tenancyTenant, $dbName);
         $tenancyTenant->save();
 
         Mail::to($tenant->email)->send(new TenantApprovedMail($tenant, $domain, $temporaryPassword));
+    }
+
+    protected function applyTenantMirrorEncryptionSchema(string $dbName): void
+    {
+        $alterStatements = [
+            "ALTER TABLE `$dbName`.`customers` MODIFY `name` TEXT NOT NULL",
+            "ALTER TABLE `$dbName`.`customers` MODIFY `email` TEXT NULL",
+            "ALTER TABLE `$dbName`.`customers` MODIFY `phone` TEXT NULL",
+            "ALTER TABLE `$dbName`.`customers` MODIFY `address` TEXT NULL",
+            "ALTER TABLE `$dbName`.`users` MODIFY `name` TEXT NOT NULL",
+            "ALTER TABLE `$dbName`.`users` MODIFY `phone` TEXT NULL",
+            "ALTER TABLE `$dbName`.`users` MODIFY `address` TEXT NULL",
+            "ALTER TABLE `$dbName`.`users` MODIFY `driver_license_front_path` TEXT NULL",
+            "ALTER TABLE `$dbName`.`users` MODIFY `driver_license_back_path` TEXT NULL",
+        ];
+
+        foreach ($alterStatements as $sql) {
+            try {
+                DB::statement($sql);
+            } catch (\Throwable $e) {
+                // Best effort only.
+            }
+        }
     }
 
     protected function syncTenantDomainRouting(Tenant $tenant, ?string $previousDomain = null): void
@@ -329,13 +354,11 @@ class SuperAdminController extends Controller
             ['data' => ['company_name' => $tenant->company_name]]
         );
 
-        $tenantData = $tenancyTenant->data;
-        if (! is_array($tenantData)) {
-            $decoded = json_decode((string) $tenantData, true);
-            $tenantData = is_array($decoded) ? $decoded : [];
-        }
-        $tenantData['database'] = 'tenant_' . $tenant->id;
-        $tenancyTenant->data = $tenantData;
+        $existingDb = TenantDatabaseName::fromTenancyData($tenancyTenant);
+        TenantDatabaseName::setOnTenancyTenant(
+            $tenancyTenant,
+            $existingDb ?? TenantDatabaseName::generate((int) $tenant->id)
+        );
         $tenancyTenant->save();
 
         if (! $tenant->domain) {

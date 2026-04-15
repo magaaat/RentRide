@@ -106,6 +106,10 @@ class User extends Authenticatable
 
     public function hasPermission(string $permission): bool
     {
+        if (! $this->isPermissionAvailableForCurrentTenant($permission)) {
+            return false;
+        }
+
         if ($this->isAdmin()) {
             return true;
         }
@@ -138,11 +142,54 @@ class User extends Authenticatable
         ];
     }
 
+    public static function permissionFeatureRequirements(): array
+    {
+        return [
+            'maintenance.manage' => Tenant::FEATURE_MAINTENANCE_TRACKING,
+            'payments.manage' => Tenant::FEATURE_PAYMENT_TRACKING,
+            'reports.view' => Tenant::FEATURE_SALES_DASHBOARD,
+        ];
+    }
+
+    public function isPermissionAvailableForCurrentTenant(string $permission): bool
+    {
+        $feature = self::permissionFeatureRequirements()[$permission] ?? null;
+        if ($feature === null) {
+            return true;
+        }
+
+        return (bool) $this->tenant?->hasFeature($feature);
+    }
+
+    public static function permissionAllowedForTenant(string $permission, ?Tenant $tenant): bool
+    {
+        $feature = self::permissionFeatureRequirements()[$permission] ?? null;
+        if ($feature === null) {
+            return true;
+        }
+
+        return (bool) $tenant?->hasFeature($feature);
+    }
+
+    public static function permissionLabelsForTenant(?Tenant $tenant): array
+    {
+        return collect(self::permissionLabels())
+            ->filter(fn ($label, $permission) => self::permissionAllowedForTenant($permission, $tenant))
+            ->all();
+    }
+
+    public static function sanitizePermissionsForTenant(array $permissions, ?Tenant $tenant): array
+    {
+        $allowed = array_keys(self::permissionLabelsForTenant($tenant));
+
+        return array_values(array_intersect($permissions, $allowed));
+    }
+
     public static function defaultPermissionsForRole(string $role): array
     {
         return match ($role) {
             'branch_manager' => ['bookings.manage', 'customers.manage', 'vehicles.manage', 'maintenance.manage', 'payments.manage', 'reports.view'],
-            'reservation_staff' => ['bookings.manage', 'customers.manage'],
+            'reservation_staff' => ['bookings.manage', 'customers.manage', 'payments.manage'],
             'fleet_maintenance_staff' => ['vehicles.manage', 'maintenance.manage'],
             'cashier_billing_staff' => ['payments.manage'],
             default => [],

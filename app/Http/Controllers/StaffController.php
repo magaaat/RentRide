@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Mail\StaffWelcomeMail;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class StaffController extends Controller
 {
@@ -21,7 +25,7 @@ class StaffController extends Controller
             ->get();
 
         $roleLabels = User::staffRoles();
-        $permissionLabels = User::permissionLabels();
+        $permissionLabels = User::permissionLabelsForTenant($admin->tenant);
         $roleTemplates = $this->resolveRoleTemplates($admin->tenant);
 
         $staffCountByRole = User::query()
@@ -50,7 +54,7 @@ class StaffController extends Controller
 
         return view('admin.staff.create', [
             'roleLabels' => User::staffRoles(),
-            'permissionLabels' => User::permissionLabels(),
+            'permissionLabels' => User::permissionLabelsForTenant($admin->tenant),
             'defaultPermissionsByRole' => $roleTemplates,
         ]);
     }
@@ -60,26 +64,41 @@ class StaffController extends Controller
         $admin = Auth::user();
         abort_unless($admin && $admin->canManageStaff(), 403);
 
+        $availablePermissionLabels = User::permissionLabelsForTenant($admin->tenant);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'role' => ['required', 'in:' . implode(',', array_keys(User::staffRoles()))],
             'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['string', 'in:' . implode(',', array_keys(User::permissionLabels()))],
+            'permissions.*' => ['string', 'in:' . implode(',', array_keys($availablePermissionLabels))],
             'is_active' => ['nullable', 'boolean'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            'generate_password' => ['nullable', 'in:0,1'],
+            'password' => [
+                Rule::requiredUnless('generate_password', '1'),
+                'nullable',
+                'string',
+                'min:8',
+                'confirmed',
+            ],
         ]);
+
+        $generatePassword = $request->boolean('generate_password');
+
+        $plainPassword = $generatePassword
+            ? Str::password(12)
+            : $data['password'];
 
         $roleTemplates = $this->resolveRoleTemplates($admin->tenant);
         $permissions = $data['permissions'] ?? ($roleTemplates[$data['role']] ?? User::defaultPermissionsForRole($data['role']));
         if ($data['role'] !== 'branch_manager') {
             $permissions = array_values($permissions);
         }
+        $permissions = User::sanitizePermissionsForTenant($permissions, $admin->tenant);
 
-        User::create([
+        $staffUser = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => $data['password'],
+            'password' => $plainPassword,
             'role' => $data['role'],
             'staff_role' => $data['role'],
             'tenant_id' => $admin->tenant_id,
@@ -87,8 +106,22 @@ class StaffController extends Controller
             'is_active' => (bool) ($data['is_active'] ?? true),
         ]);
 
-        return redirect()->route('admin.staff.index')
-            ->with('success', 'Staff created successfully.');
+        $tenant = $admin->tenant;
+        if ($tenant) {
+            try {
+                Mail::to($staffUser->email)->send(
+                    new StaffWelcomeMail($tenant, $staffUser, $plainPassword)
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        $message = $generatePassword
+            ? 'Staff created. A secure password was generated and sent to their email.'
+            : 'Staff created successfully.';
+
+        return redirect()->route('admin.staff.index')->with('success', $message);
     }
 
     public function edit(User $staff)
@@ -102,7 +135,7 @@ class StaffController extends Controller
         return view('admin.staff.edit', [
             'staffUser' => $staff,
             'roleLabels' => User::staffRoles(),
-            'permissionLabels' => User::permissionLabels(),
+            'permissionLabels' => User::permissionLabelsForTenant($admin->tenant),
             'defaultPermissionsByRole' => $roleTemplates,
         ]);
     }
@@ -113,12 +146,13 @@ class StaffController extends Controller
         abort_unless($admin && $admin->canManageStaff(), 403);
         abort_unless((int) $staff->tenant_id === (int) $admin->tenant_id && $staff->isStaff(), 404);
 
+        $availablePermissionLabels = User::permissionLabelsForTenant($admin->tenant);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $staff->id],
             'role' => ['required', 'in:' . implode(',', array_keys(User::staffRoles()))],
             'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['string', 'in:' . implode(',', array_keys(User::permissionLabels()))],
+            'permissions.*' => ['string', 'in:' . implode(',', array_keys($availablePermissionLabels))],
             'is_active' => ['nullable', 'boolean'],
             'password' => ['nullable', 'confirmed', 'min:8'],
         ]);
@@ -127,6 +161,7 @@ class StaffController extends Controller
         if ($data['role'] !== 'branch_manager') {
             $permissions = array_values($permissions);
         }
+        $permissions = User::sanitizePermissionsForTenant($permissions, $admin->tenant);
 
         $staff->name = $data['name'];
         $staff->email = $data['email'];
@@ -159,7 +194,7 @@ class StaffController extends Controller
         abort_unless($admin && $admin->canManageStaff(), 403);
 
         $roleLabels = User::staffRoles();
-        $permissionLabels = User::permissionLabels();
+        $permissionLabels = User::permissionLabelsForTenant($admin->tenant);
 
         $data = $request->validate([
             'role' => ['required', 'in:' . implode(',', array_keys($roleLabels))],
@@ -168,10 +203,12 @@ class StaffController extends Controller
         ]);
 
         $role = $data['role'];
-        $permissions = array_values($data['permissions'] ?? []);
-
         $tenant = $admin->tenant;
         abort_unless($tenant, 404);
+        $permissions = User::sanitizePermissionsForTenant(
+            array_values($data['permissions'] ?? []),
+            $tenant
+        );
 
         $templates = $this->resolveRoleTemplates($tenant);
         $templates[$role] = $permissions;
@@ -195,7 +232,10 @@ class StaffController extends Controller
 
         $templates = [];
         foreach ($roles as $role) {
-            $templates[$role] = array_values($stored[$role] ?? User::defaultPermissionsForRole($role));
+            $templates[$role] = User::sanitizePermissionsForTenant(
+                array_values($stored[$role] ?? User::defaultPermissionsForRole($role)),
+                $tenant
+            );
         }
 
         return $templates;
