@@ -9,27 +9,24 @@
             <div class="inline-flex items-center rounded-full border rr-border rr-surface-2 px-3 py-1 text-xs font-semibold text-slate-200">
                 Tenant: {{ $tenant->company_name }}
             </div>
-            <h2 class="mt-4 text-2xl font-semibold">Your domain is currently unavailable</h2>
-            <p class="mt-2 text-sm text-slate-300">
-                Your access has been temporarily disabled because your subscription is inactive or has reached its expiry.
-                To restore access, request a plan extension below.
-            </p>
+            <h2 class="mt-4 text-2xl font-semibold">Access unavailable</h2>
+            <p class="mt-2 text-sm text-slate-300">Subscription inactive or expired. Request an extension below.</p>
         </div>
 
         @if($hasPending)
             <div class="mt-6 rounded-xl border rr-border rr-surface-2 p-4 text-sm text-slate-200">
-                You already have a pending extension request. Please wait for Super Admin approval.
+                Extension request pending.
             </div>
         @else
             <div class="mt-8">
-                <h3 class="text-sm font-semibold text-slate-200 mb-3 text-center">Extend Plan</h3>
+                <h3 class="text-sm font-semibold text-slate-200 mb-3 text-center">Request extension</h3>
 
                 <form method="POST" action="{{ route('tenant.extend.request') }}" id="extend-form">
                     @csrf
                     <input type="hidden" name="tenant_id" value="{{ $tenant->id }}">
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        @foreach($plans as $plan)
+                        @forelse($plans as $plan)
                             @php
                                 $final = $plan->discountedPrice();
                                 $base = (float) $plan->base_price;
@@ -40,12 +37,16 @@
                                         : '₱' . number_format((float)$plan->discount_value, 0) . ' OFF')
                                     : null;
                             @endphp
-                            <label class="cursor-pointer">
-                                <input type="radio" name="requested_plan" value="{{ $plan->key }}" class="hidden peer" required>
-                                <div class="h-full rounded-2xl border rr-border rr-surface-2 p-5 peer-checked:ring-2 peer-checked:ring-offset-0 peer-checked:ring-[var(--rr-accent)]">
+                            <label class="{{ $plan->is_active ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                <input type="radio" name="requested_plan" value="{{ $plan->key }}" class="hidden peer" @disabled(! $plan->is_active) required>
+                                <div class="h-full rounded-2xl border rr-border rr-surface-2 p-5 {{ $plan->is_active ? 'peer-checked:ring-2 peer-checked:ring-offset-0 peer-checked:ring-[var(--rr-accent)]' : 'opacity-70' }}">
                                     <div class="flex items-center justify-between">
                                         <div class="text-sm font-semibold">{{ $plan->name }}</div>
-                                        @if($hasDiscount)
+                                        @if(! $plan->is_active)
+                                            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full border border-rose-500/30 bg-rose-500/10 text-rose-300">
+                                                Disabled
+                                            </span>
+                                        @elseif($hasDiscount)
                                             <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full rr-surface border rr-border">
                                                 {{ $discountLabel }}
                                             </span>
@@ -65,14 +66,22 @@
                                     </ul>
                                 </div>
                             </label>
-                        @endforeach
+                        @empty
+                            <div class="md:col-span-3 rounded-2xl border rr-border rr-surface-2 p-5 text-sm text-slate-300">
+                                No plans are available for extension at this time.
+                            </div>
+                        @endforelse
                     </div>
 
-                    <div class="mt-6 flex items-center justify-center">
-                        <button type="button" id="extend-button" class="inline-flex items-center rounded-lg rr-btn-primary px-5 py-2.5 text-sm font-semibold">
-                            Extend Plan
-                        </button>
-                    </div>
+                    @if($plans->where('is_active', true)->isNotEmpty())
+                        <div class="mt-6 flex items-center justify-center">
+                            <button type="button" id="extend-button" class="inline-flex items-center rounded-lg rr-btn-primary px-5 py-2.5 text-sm font-semibold">
+                                Request extension
+                            </button>
+                        </div>
+                    @else
+                        <div class="mt-6 text-center text-sm text-slate-300">No enabled plans available.</div>
+                    @endif
                 </form>
             </div>
         @endif

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -485,7 +486,7 @@ class AuthController extends Controller
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string',
             'password' => 'required|confirmed|min:8',
-            'plan' => 'required|in:basic,standard,premium',
+            'plan' => ['required', Rule::exists('subscription_plans', 'key')->where('is_active', true)],
         ]);
 
         $tenant = Tenant::create([
@@ -522,7 +523,12 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'tenant_id' => ['required', 'integer', 'exists:tenants,id'],
-            'requested_plan' => ['required', 'in:basic,standard,premium'],
+            'requested_plan' => [
+                'required',
+                Rule::exists('subscription_plans', 'key')
+                    ->where('show_on_landing', true)
+                    ->where('is_active', true),
+            ],
         ]);
 
         $tenant = Tenant::findOrFail($data['tenant_id']);
@@ -704,8 +710,10 @@ class AuthController extends Controller
         // If domain is disabled (or expired), show the domain disabled page (pre-login)
         $expired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry);
         if (! $tenant->is_domain_active || $expired) {
-            $plans = SubscriptionPlan::where('is_active', true)
-                ->orderByRaw("FIELD(`key`, 'basic', 'standard', 'premium')")
+            $plans = SubscriptionPlan::query()
+                ->where('show_on_landing', true)
+                ->orderBy('sort_order')
+                ->orderBy('id')
                 ->get();
 
             $hasPending = PlanExtensionRequest::where('tenant_id', $tenant->id)

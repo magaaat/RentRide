@@ -6,7 +6,7 @@
 <div class="mx-auto w-full max-w-3xl">
     <div class="mb-8 text-center sm:text-left">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">Add tenant</h1>
-        <p class="mt-2 text-sm text-slate-400">Creates an approved rental company and admin. A temporary password is emailed automatically.</p>
+        <p class="mt-2 text-sm text-slate-400">New tenant and admin account</p>
     </div>
 
     <div class="rr-panel-elevated p-6 sm:p-8">

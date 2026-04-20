@@ -20,7 +20,7 @@
             @if($t->phone)
                 <p class="mt-1 text-xs text-slate-500">Phone: {{ $t->phone }}</p>
             @endif
-            <span class="mt-3 inline-flex text-xs font-semibold text-violet-300">View vehicles →</span>
+            <span class="mt-3 inline-flex text-xs font-semibold text-violet-300">View vehicles</span>
         </a>
     @empty
         <p class="text-slate-400 text-sm col-span-full">No rental companies are available yet. Check back soon.</p>
@@ -28,7 +28,7 @@
 </div>
 
 <h2 class="mb-1 text-lg font-semibold text-slate-100">Active bookings</h2>
-<p class="mb-4 text-sm text-slate-500">Pending and confirmed trips.</p>
+<p class="mb-4 text-sm text-slate-500">Pending and confirmed trips. Payment is usually settled at the rental office (cash or agreed method); the company records it in their system. Your booking stays pending until they receive payment and confirm.</p>
 <div class="mb-10 -mx-1 overflow-x-auto rounded-xl border border-slate-700/80 bg-slate-900/40 shadow-rr-sm sm:mx-0">
     <table class="min-w-full text-sm">
         <thead class="bg-slate-800/60 text-slate-200">
@@ -37,6 +37,7 @@
                 <th class="px-4 py-3 font-semibold">Vehicle</th>
                 <th class="px-4 py-3 font-semibold">Dates</th>
                 <th class="px-4 py-3 font-semibold">Booking</th>
+                <th class="px-4 py-3 font-semibold">Amount (est.)</th>
                 <th class="px-4 py-3 font-semibold">Payment</th>
             </tr>
         </thead>
@@ -50,19 +51,23 @@
                         <span class="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-200">{{ ucfirst($booking->status) }}</span>
                     </td>
                     <td class="px-4 py-3 text-slate-400">
+                        <span class="text-slate-200">₱{{ number_format($booking->calculateTotalAmount(), 2) }}</span>
+                        <span class="block text-xs text-slate-500">Days × daily rate</span>
+                    </td>
+                    <td class="px-4 py-3 text-slate-400">
                         @if($booking->payment)
                             <span class="text-slate-200">{{ ucfirst($booking->payment->payment_status) }}</span>
                             @if($booking->payment->payment_status === 'paid')
-                                <span class="block text-xs">₱{{ number_format($booking->payment->amount, 2) }}</span>
+                                <span class="block text-xs">Recorded ₱{{ number_format($booking->payment->amount, 2) }}</span>
                             @endif
                         @else
-                            <span class="text-slate-500">Pending</span>
+                            <span class="text-slate-500">Awaiting record</span>
                         @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="px-4 py-8 text-center text-slate-500">No active bookings. Search for a vehicle to get started.</td>
+                    <td colspan="6" class="px-4 py-8 text-center text-slate-500">No active bookings. Search for a vehicle to get started.</td>
                 </tr>
             @endforelse
         </tbody>

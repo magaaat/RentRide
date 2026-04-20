@@ -82,6 +82,9 @@ Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
     // Super admin routes (role-checked inside controller)
     Route::get('/superadmin/dashboard', [DashboardController::class, 'superAdmin'])->name('superadmin.dashboard');
     Route::get('/superadmin/about', [SupportController::class, 'superAdminAbout'])->name('superadmin.about');
+    Route::post('/superadmin/about/tenants/{tenant}/messages', [SupportController::class, 'storeSuperAdminChatMessage'])->name('superadmin.about.tenants.messages.store');
+    Route::post('/superadmin/about/messages/{inquiry}/reply', [SupportController::class, 'storeSuperAdminReply'])->name('superadmin.about.messages.reply');
+    Route::get('/superadmin/support', fn () => redirect()->route('superadmin.about'))->name('superadmin.support');
     Route::get('/superadmin/tenants', [SuperAdminController::class, 'tenantsIndex'])->name('superadmin.tenants.index');
     Route::get('/superadmin/tenants/create', [SuperAdminController::class, 'createTenant'])->name('superadmin.tenants.create');
     Route::post('/superadmin/tenants', [SuperAdminController::class, 'storeTenant'])->name('superadmin.tenants.store');
@@ -110,6 +113,8 @@ Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
 
         Route::get('/admin/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
         Route::get('/admin/about', [SupportController::class, 'tenantAbout'])->name('admin.about');
+        Route::post('/admin/about/messages', [SupportController::class, 'storeTenantInquiry'])->name('admin.about.messages.store');
+        Route::get('/admin/support', fn () => redirect()->route('admin.about'))->name('admin.support');
 
         Route::get('/admin/reports', [TenantReportController::class, 'index'])
             ->middleware(['tenant.permission:reports.view', 'tenant.feature:sales_dashboard'])

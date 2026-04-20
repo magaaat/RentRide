@@ -13,7 +13,7 @@ class TenantDatabaseName
         $key = (string) config('app.key', 'rentride');
         $hash = hash_hmac('sha256', 'tenant-db:' . $tenantId, $key);
 
-        return 'tenant_' . substr($hash, 0, 20);
+        return substr($hash, 0, 20);
     }
 
     public static function legacy(int $tenantId): string

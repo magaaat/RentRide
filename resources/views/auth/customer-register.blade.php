@@ -6,7 +6,7 @@
 <div class="min-h-[70vh] flex items-center justify-center py-10">
     <div class="w-full max-w-lg bg-slate-800/70 border border-slate-700 rounded-2xl shadow-2xl p-8 backdrop-blur">
         <h2 class="text-2xl font-semibold text-center mb-2">Create customer account</h2>
-        <p class="text-center text-sm text-slate-400 mb-6">No approval needed — start browsing and booking right away.</p>
+        <p class="text-center text-sm text-slate-400 mb-6">Instant access</p>
         <form method="POST" action="{{ route('customer.register.post') }}" class="space-y-4">
             @csrf
             <div>
@@ -50,7 +50,7 @@
             <a href="{{ route('customer.login') }}" class="rr-link-accent font-semibold">Sign in</a>
         </p>
         <p class="mt-2 text-center text-sm">
-            <a href="{{ url('/') }}" class="text-slate-500 hover:text-slate-300">← Back to home</a>
+            <a href="{{ url('/') }}" class="text-slate-500 hover:text-slate-300">Back to home</a>
         </p>
     </div>
 </div>

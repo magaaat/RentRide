@@ -50,6 +50,14 @@
             -
         @endif
     </p>
+    <p class="mb-1 text-sm">
+        <strong>Tenant DB:</strong>
+        @if($tenantDatabaseName)
+            <code class="rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-200">{{ $tenantDatabaseName }}</code>
+        @else
+            <span class="text-slate-400">Not provisioned yet</span>
+        @endif
+    </p>
     <p class="mb-0 text-sm"><strong>Domain Status:</strong>
         @if($tenant->is_domain_active)
             <span class="rr-chip-accent inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">

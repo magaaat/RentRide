@@ -7,7 +7,7 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-semibold">Plan Extension Requests</h1>
-            <p class="text-sm text-slate-300">Review tenant requests to extend/renew access.</p>
+            <p class="text-sm text-slate-400">Extension requests</p>
         </div>
     </div>
 
@@ -32,7 +32,13 @@
                                 <div class="font-semibold">{{ $req->tenant->company_name }}</div>
                                 <div class="text-xs text-slate-400">{{ $req->tenant->email }}</div>
                             </td>
-                            <td class="px-5 py-3">{{ ucfirst($req->requested_plan) }}</td>
+                            <td class="px-5 py-3">
+                                {{ $req->plan?->name ?? $req->requested_plan }}
+                                <span class="text-xs text-slate-500">({{ $req->requested_plan }})</span>
+                                @if(! $req->plan || ! $req->plan->show_on_landing || ! $req->plan->is_active)
+                                    <span class="ms-2 inline-flex items-center rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[11px] font-semibold">Unavailable</span>
+                                @endif
+                            </td>
                             <td class="px-5 py-3 text-slate-300">{{ $req->created_at->format('Y-m-d H:i') }}</td>
                             <td class="px-5 py-3">
                                 <div class="flex items-center gap-2">
@@ -86,7 +92,10 @@
                                 <div class="font-semibold">{{ $req->tenant->company_name }}</div>
                                 <div class="text-xs text-slate-400">{{ $req->tenant->email }}</div>
                             </td>
-                            <td class="px-5 py-3">{{ ucfirst($req->requested_plan) }}</td>
+                            <td class="px-5 py-3">
+                                {{ $req->plan?->name ?? $req->requested_plan }}
+                                <span class="text-xs text-slate-500">({{ $req->requested_plan }})</span>
+                            </td>
                             <td class="px-5 py-3">
                                 @if($req->status === 'approved')
                                     <span class="rr-chip-accent inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">Approved</span>

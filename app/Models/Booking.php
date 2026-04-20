@@ -22,6 +22,65 @@ class Booking extends Model
         'end_date' => 'date',
     ];
 
+    protected static function booted(): void
+    {
+        static::created(function (Booking $booking) {
+            $booking->loadMissing('vehicle');
+            $amount = $booking->calculateTotalAmount();
+            Payment::query()->firstOrCreate(
+                ['booking_id' => $booking->id],
+                [
+                    'tenant_id' => $booking->tenant_id,
+                    'amount' => $amount,
+                    'payment_method' => 'pending',
+                    'payment_status' => 'pending',
+                    'payment_date' => null,
+                ]
+            );
+        });
+    }
+
+    /**
+     * Total rental price: inclusive calendar days × vehicle daily rate.
+     */
+    public function calculateTotalAmount(): float
+    {
+        $this->loadMissing('vehicle');
+        if (! $this->vehicle) {
+            return 0.0;
+        }
+
+        $days = $this->start_date->diffInDays($this->end_date) + 1;
+
+        return round(max(0, $days) * (float) $this->vehicle->price_per_day, 2);
+    }
+
+    public function hasPaidPayment(): bool
+    {
+        return $this->payment && $this->payment->payment_status === 'paid';
+    }
+
+    /**
+     * Another confirmed booking on the same vehicle overlaps these dates (excluding this row).
+     */
+    public function hasOverlappingConfirmedBooking(): bool
+    {
+        return static::query()
+            ->where('tenant_id', $this->tenant_id)
+            ->where('vehicle_id', $this->vehicle_id)
+            ->where('status', 'confirmed')
+            ->where('id', '!=', $this->id)
+            ->where(function ($q) {
+                $q->whereBetween('start_date', [$this->start_date, $this->end_date])
+                    ->orWhereBetween('end_date', [$this->start_date, $this->end_date])
+                    ->orWhere(function ($inner) {
+                        $inner->where('start_date', '<=', $this->start_date)
+                            ->where('end_date', '>=', $this->end_date);
+                    });
+            })
+            ->exists();
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);

@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\PlanExtensionRequest;
+use App\Models\SubscriptionPlan;
+use App\Support\PlanLimits;
 
 class Tenant extends Model
 {
@@ -20,6 +22,9 @@ class Tenant extends Model
         'address',
         'theme',
         'logo_path',
+        'public_tagline',
+        'website_url',
+        'public_booking_notes',
         'staff_role_permissions',
         'subscription_plan',
         'subscription_expiry',
@@ -98,14 +103,22 @@ class Tenant extends Model
         return $scheme . '://' . $this->domain . $portSegment . '/login';
     }
 
+    /**
+     * Feature tier (basic / standard / premium) for limits and feature flags.
+     * Uses subscription_plans.feature_tier when the tenant's subscription_plan matches a plan row.
+     */
+    public function planTier(): string
+    {
+        return PlanLimits::resolveTier($this->subscription_plan ?? null);
+    }
+
     public function hasFeature(string $feature): bool
     {
-        $plan = $this->subscription_plan ?? 'basic';
+        $tier = $this->planTier();
 
         $planFeatures = [
             'basic' => [
-                // Basic features are the default. We intentionally keep this list small
-                // and only gate features that require Standard/Premium.
+                self::FEATURE_PAYMENT_TRACKING,
             ],
             'standard' => [
                 self::FEATURE_PAYMENT_TRACKING,
@@ -123,7 +136,7 @@ class Tenant extends Model
             ],
         ];
 
-        return in_array($feature, $planFeatures[$plan] ?? [], true);
+        return in_array($feature, $planFeatures[$tier] ?? [], true);
     }
 }
 

@@ -24,5 +24,10 @@ class PlanExtensionRequest extends Model
     {
         return $this->belongsTo(Tenant::class);
     }
+
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(SubscriptionPlan::class, 'requested_plan', 'key');
+    }
 }
 

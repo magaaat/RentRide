@@ -29,9 +29,12 @@ class TenantController extends Controller
             'address' => 'nullable|string',
             'theme' => 'required|in:slate,indigo,emerald,fuchsia',
             'logo' => 'nullable|image|max:5120',
+            'public_tagline' => 'nullable|string|max:255',
+            'website_url' => 'nullable|url|max:512',
+            'public_booking_notes' => 'nullable|string|max:5000',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
-            'password' => 'nullable|confirmed|min:8',
+            'new_password' => 'nullable|confirmed|min:8',
         ]);
 
         $tenant->update([
@@ -40,6 +43,9 @@ class TenantController extends Controller
             'phone' => $data['phone'],
             'address' => $data['address'] ?? null,
             'theme' => $data['theme'],
+            'public_tagline' => $data['public_tagline'] ?? null,
+            'website_url' => $data['website_url'] ?? null,
+            'public_booking_notes' => $data['public_booking_notes'] ?? null,
         ]);
 
         if ($request->hasFile('logo')) {
@@ -52,8 +58,8 @@ class TenantController extends Controller
 
         $user->name = $data['name'];
         $user->email = $data['email'];
-        if (! empty($data['password'])) {
-            $user->password = Hash::make($data['password']);
+        if (! empty($data['new_password'])) {
+            $user->password = Hash::make($data['new_password']);
         }
         $user->save();
 

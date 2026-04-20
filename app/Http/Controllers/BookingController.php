@@ -16,7 +16,7 @@ class BookingController extends TenantControllerBase
 {
     public function index()
     {
-        $bookings = Booking::with(['vehicle', 'customer'])
+        $bookings = Booking::with(['vehicle', 'customer', 'payment'])
             ->where('tenant_id', $this->tenantId())
             ->latest()
             ->paginate(20);
@@ -88,22 +88,14 @@ class BookingController extends TenantControllerBase
         ]);
 
         if ($data['status'] === 'confirmed') {
-            $hasConfirmedOverlap = Booking::query()
-                ->where('tenant_id', $booking->tenant_id)
-                ->where('vehicle_id', $booking->vehicle_id)
-                ->where('status', 'confirmed')
-                ->where('id', '!=', $booking->id)
-                ->where(function ($q) use ($booking) {
-                    $q->whereBetween('start_date', [$booking->start_date, $booking->end_date])
-                        ->orWhereBetween('end_date', [$booking->start_date, $booking->end_date])
-                        ->orWhere(function ($inner) use ($booking) {
-                            $inner->where('start_date', '<=', $booking->start_date)
-                                ->where('end_date', '>=', $booking->end_date);
-                        });
-                })
-                ->exists();
+            $booking->loadMissing('payment');
+            if (! $booking->hasPaidPayment()) {
+                return back()->withErrors([
+                    'status' => 'Cannot confirm until payment is recorded as paid. Use Record payment (e.g. cash at the office), then the booking can be confirmed automatically, or confirm again after payment.',
+                ]);
+            }
 
-            if ($hasConfirmedOverlap) {
+            if ($booking->hasOverlappingConfirmedBooking()) {
                 return back()->withErrors([
                     'status' => 'Cannot confirm this booking because another confirmed booking overlaps the same vehicle dates.',
                 ]);

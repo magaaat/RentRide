@@ -9,6 +9,8 @@ class SubscriptionPlan extends Model
     protected $fillable = [
         'key',
         'name',
+        'tier',
+        'feature_tier',
         'base_price',
         'billing_period',
         'currency',
@@ -16,6 +18,8 @@ class SubscriptionPlan extends Model
         'discount_value',
         'features',
         'is_active',
+        'show_on_landing',
+        'sort_order',
     ];
 
     protected $casts = [
@@ -23,6 +27,8 @@ class SubscriptionPlan extends Model
         'discount_value' => 'decimal:2',
         'features' => 'array',
         'is_active' => 'boolean',
+        'show_on_landing' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     public function discountedPrice(): float

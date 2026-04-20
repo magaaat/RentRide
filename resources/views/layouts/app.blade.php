@@ -224,14 +224,13 @@
     $themes = [
         'slate' => [
             'text' => 'text-slate-800',
-            'bg' => '#f0f4f8',
+            'bg' => '#f1f5f9',
             'surface' => '#ffffff',
-            'surface2' => '#f1f5f9',
-            'border' => '#e2e8f0',
+            'surface2' => '#f8fafc',
+            'border' => '#dbe3ee',
             'hover' => 'rgba(30,41,59,0.045)',
             'head' => 'rgba(148,163,184,0.12)',
             'headerBorder' => 'rgba(148,163,184,0.22)',
-            // Slate theme should feel "blue-gray", not green.
             'brand' => 'bg-sky-400 text-slate-950',
             'accentText' => 'text-sky-300',
             'accentHoverText' => 'hover:text-sky-300',
@@ -241,14 +240,14 @@
             'accentHexHover' => '#7dd3fc',
         ],
         'indigo' => [
-            'text' => 'text-slate-100',
-            'bg' => '#1e1b4b',      // indigo-950
-            'surface' => '#111827',
-            'surface2' => '#0b1220',
-            'border' => '#312e81',  // indigo-900-ish
-            'hover' => 'rgba(165,180,252,0.10)',
-            'head' => 'rgba(165,180,252,0.12)',
-            'headerBorder' => 'rgba(165,180,252,0.20)',
+            'text' => 'text-slate-800',
+            'bg' => '#eef2ff',
+            'surface' => '#ffffff',
+            'surface2' => '#eef2ff',
+            'border' => '#c7d2fe',
+            'hover' => 'rgba(99,102,241,0.08)',
+            'head' => 'rgba(99,102,241,0.10)',
+            'headerBorder' => 'rgba(99,102,241,0.20)',
             'brand' => 'bg-indigo-400 text-slate-950',
             'accentText' => 'text-indigo-300',
             'accentHoverText' => 'hover:text-indigo-300',
@@ -258,14 +257,14 @@
             'accentHexHover' => '#a5b4fc',
         ],
         'emerald' => [
-            'text' => 'text-slate-100',
-            'bg' => '#022c22',      // emerald-950
-            'surface' => '#111827',
-            'surface2' => '#0b1220',
-            'border' => '#064e3b',  // emerald-900
-            'hover' => 'rgba(110,231,183,0.10)',
-            'head' => 'rgba(110,231,183,0.12)',
-            'headerBorder' => 'rgba(110,231,183,0.18)',
+            'text' => 'text-slate-800',
+            'bg' => '#ecfdf5',
+            'surface' => '#ffffff',
+            'surface2' => '#ecfdf5',
+            'border' => '#a7f3d0',
+            'hover' => 'rgba(16,185,129,0.08)',
+            'head' => 'rgba(16,185,129,0.10)',
+            'headerBorder' => 'rgba(16,185,129,0.18)',
             'brand' => 'bg-emerald-400 text-slate-950',
             'accentText' => 'text-emerald-300',
             'accentHoverText' => 'hover:text-emerald-300',
@@ -275,14 +274,14 @@
             'accentHexHover' => '#6ee7b7',
         ],
         'fuchsia' => [
-            'text' => 'text-slate-100',
-            'bg' => '#4a044e',      // fuchsia-950
-            'surface' => '#111827',
-            'surface2' => '#0b1220',
-            'border' => '#701a75',  // fuchsia-900
-            'hover' => 'rgba(240,171,252,0.10)',
-            'head' => 'rgba(240,171,252,0.12)',
-            'headerBorder' => 'rgba(240,171,252,0.18)',
+            'text' => 'text-slate-800',
+            'bg' => '#fdf2f8',
+            'surface' => '#ffffff',
+            'surface2' => '#fdf2f8',
+            'border' => '#f5c2e7',
+            'hover' => 'rgba(217,70,239,0.08)',
+            'head' => 'rgba(217,70,239,0.10)',
+            'headerBorder' => 'rgba(217,70,239,0.18)',
             'brand' => 'bg-fuchsia-400 text-slate-950',
             'accentText' => 'text-fuchsia-200',
             'accentHoverText' => 'hover:text-fuchsia-200',
@@ -293,14 +292,9 @@
         ],
     ];
 
-    // Keep the overall app visual system consistent; tenant theme only controls accent/button color.
+    // Tenant-selected theme controls full background/surface palette and accents.
     $selectedTheme = $themes[$theme] ?? $themes['slate'];
-    $t = $themes['slate'];
-    $t['brand'] = $selectedTheme['brand'];
-    $t['accentBg'] = $selectedTheme['accentBg'];
-    $t['accentBgHover'] = $selectedTheme['accentBgHover'];
-    $t['accentHex'] = $selectedTheme['accentHex'];
-    $t['accentHexHover'] = $selectedTheme['accentHexHover'];
+    $t = $selectedTheme;
 
     /**
      * Public entry pages: landing + login/register screens.
@@ -539,7 +533,7 @@
                     <span class="rr-nav-badge absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white"></span>
                 @endif
             </a>
-            <a href="{{ route('superadmin.about') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.about') ? $navActive : $navIdle }}">About</a>
+            <a href="{{ route('superadmin.about') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('superadmin.about', 'superadmin.support') ? $navActive : $navIdle }}">Support</a>
         @elseif(auth()->user()->isTenantUser())
             @php
                 $tid = auth()->user()->tenant_id;
@@ -605,7 +599,7 @@
             @if($canStaff)
                 <a href="{{ route('admin.staff.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.staff.*') ? $navActive : $navIdle }}">Staff</a>
             @endif
-            <a href="{{ route('admin.about') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.about') ? $navActive : $navIdle }}">About</a>
+            <a href="{{ route('admin.about') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.about', 'admin.support') ? $navActive : $navIdle }}">About</a>
         @else
             @php
                 $navActive = 'bg-white text-slate-900 border border-slate-200 shadow-sm';

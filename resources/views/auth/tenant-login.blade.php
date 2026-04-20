@@ -39,7 +39,7 @@
             </div>
             <div class="flex items-center justify-between text-sm">
                 <label class="inline-flex items-center gap-2 text-slate-600">
-                    <input type="checkbox" name="remember" id="remember" class="rounded border-slate-300 text-sky-500 focus:ring-sky-500">
+                    <input type="checkbox" name="remember" id="remember" class="rounded border-slate-300 accent-[var(--rr-accent)] focus:ring-[var(--rr-accent)]">
                     <span>Remember me</span>
                 </label>
                 <a href="{{ url('/forgot-password?from=tenant' . (isset($tenant) ? '&tenant=' . ($tenant->slug ?? $tenant->id) : '')) }}" class="rr-link-accent font-medium">Forgot password?</a>

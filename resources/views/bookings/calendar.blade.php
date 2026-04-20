@@ -10,13 +10,13 @@
     </div>
     <div class="flex flex-wrap items-center gap-2">
         <a href="{{ route('bookings.calendar', ['year' => $prev->year, 'month' => $prev->month]) }}" class="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-800">
-            ← Prev
+            Prev
         </a>
         <a href="{{ route('bookings.calendar', ['year' => now()->year, 'month' => now()->month]) }}" class="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-800">
             Today
         </a>
         <a href="{{ route('bookings.calendar', ['year' => $next->year, 'month' => $next->month]) }}" class="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-800">
-            Next →
+            Next
         </a>
         <a href="{{ route('bookings.index') }}" class="rounded-lg rr-btn-primary px-3 py-1.5 text-xs font-semibold">
             List view

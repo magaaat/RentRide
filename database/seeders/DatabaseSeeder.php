@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             ['key' => 'basic'],
             [
                 'name' => 'Basic',
+                'tier' => 'Basic',
+                'feature_tier' => 'basic',
                 'base_price' => 249,
                 'billing_period' => 'month',
                 'currency' => 'PHP',
@@ -32,12 +34,16 @@ class DatabaseSeeder extends Seeder
                     'Customer records',
                 ],
                 'is_active' => true,
+                'show_on_landing' => true,
+                'sort_order' => 10,
             ]
         );
         SubscriptionPlan::updateOrCreate(
             ['key' => 'standard'],
             [
                 'name' => 'Standard',
+                'tier' => 'Standard',
+                'feature_tier' => 'standard',
                 'base_price' => 449,
                 'billing_period' => 'month',
                 'currency' => 'PHP',
@@ -49,12 +55,16 @@ class DatabaseSeeder extends Seeder
                     'Sales dashboard',
                 ],
                 'is_active' => true,
+                'show_on_landing' => true,
+                'sort_order' => 20,
             ]
         );
         SubscriptionPlan::updateOrCreate(
             ['key' => 'premium'],
             [
                 'name' => 'Premium',
+                'tier' => 'Premium',
+                'feature_tier' => 'premium',
                 'base_price' => 699,
                 'billing_period' => 'month',
                 'currency' => 'PHP',
@@ -68,6 +78,8 @@ class DatabaseSeeder extends Seeder
                     'Featured listings',
                 ],
                 'is_active' => true,
+                'show_on_landing' => true,
+                'sort_order' => 30,
             ]
         );
 

@@ -25,7 +25,7 @@
             @if($t->phone)
                 <p class="mt-2 text-xs text-slate-500">{{ $t->phone }}</p>
             @endif
-            <span class="mt-3 inline-block text-xs font-semibold text-violet-300">View cars →</span>
+            <span class="mt-3 inline-block text-xs font-semibold text-violet-300">View cars</span>
         </a>
     @empty
         <p class="text-slate-500 col-span-full">No companies match your search.</p>

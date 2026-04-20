@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\PlanExtensionApprovedMail;
 use App\Models\PlanExtensionRequest;
+use App\Models\SubscriptionPlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -14,12 +15,12 @@ class SuperAdminExtensionController extends Controller
     {
         abort_unless(Auth::user()?->isSuperAdmin(), 403);
 
-        $pending = PlanExtensionRequest::with('tenant')
+        $pending = PlanExtensionRequest::with(['tenant', 'plan'])
             ->where('status', 'pending')
             ->latest()
             ->get();
 
-        $recent = PlanExtensionRequest::with('tenant')
+        $recent = PlanExtensionRequest::with(['tenant', 'plan'])
             ->whereIn('status', ['approved', 'rejected'])
             ->latest()
             ->limit(20)
@@ -37,8 +38,19 @@ class SuperAdminExtensionController extends Controller
         }
 
         $tenant = $extension->tenant;
+        $plan = SubscriptionPlan::query()
+            ->where('key', $extension->requested_plan)
+            ->where('show_on_landing', true)
+            ->where('is_active', true)
+            ->first();
 
-        $tenant->subscription_plan = $extension->requested_plan;
+        if (! $plan) {
+            return back()->withErrors([
+                'email' => 'Requested plan is unavailable.',
+            ]);
+        }
+
+        $tenant->subscription_plan = $plan->key;
         $tenant->subscription_expiry = now()->addMonth();
         $tenant->is_domain_active = true;
         $tenant->save();

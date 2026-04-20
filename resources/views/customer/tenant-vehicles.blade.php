@@ -4,9 +4,23 @@
 
 @section('content')
 <div class="mb-8">
-    <a href="{{ route('customer.tenants.index') }}" class="text-sm font-medium text-violet-300 transition hover:text-violet-200">← Back to companies</a>
+    <a href="{{ route('customer.tenants.index') }}" class="text-sm font-medium text-violet-300 transition hover:text-violet-200">Back to companies</a>
     <h1 class="mt-3 text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">{{ $tenant->company_name }}</h1>
+    @if($tenant->public_tagline)
+        <p class="mt-1 text-sm font-medium text-violet-200/95">{{ $tenant->public_tagline }}</p>
+    @endif
     <p class="mt-2 text-sm text-slate-400">{{ $tenant->address ?? '' }} @if($tenant->phone) · {{ $tenant->phone }} @endif</p>
+    @if($tenant->website_url)
+        <p class="mt-2">
+            <a href="{{ $tenant->website_url }}" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-violet-300 hover:text-violet-200 underline underline-offset-2">Visit website</a>
+        </p>
+    @endif
+    @if($tenant->public_booking_notes)
+        <div class="mt-5 max-w-3xl rounded-xl border border-slate-700/80 bg-slate-900/50 p-4 text-sm leading-relaxed text-slate-300">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Good to know</div>
+            <div class="mt-2 whitespace-pre-line">{{ $tenant->public_booking_notes }}</div>
+        </div>
+    @endif
 </div>
 
 <form method="GET" class="rr-panel-elevated mb-8 p-5 sm:p-6">

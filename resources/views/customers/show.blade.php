@@ -9,7 +9,7 @@
         <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">Read-only snapshot from bookings. Customers update name, contact info, and license in their <strong class="font-medium text-slate-300">RentRide profile</strong> — not here.</p>
     </div>
     <a href="{{ route('customers.index') }}" class="inline-flex shrink-0 items-center rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800">
-        ← Back to customers
+        Back to customers
     </a>
 </div>
 

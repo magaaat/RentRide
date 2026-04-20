@@ -6,7 +6,7 @@
 <div class="mx-auto mb-4 w-full max-w-3xl">
     <div>
         <h3 class="text-xl font-semibold">Super Admin Profile</h3>
-        <p class="text-sm text-slate-300">Update your account information.</p>
+        <p class="text-sm text-slate-400">Account settings</p>
     </div>
 </div>
 

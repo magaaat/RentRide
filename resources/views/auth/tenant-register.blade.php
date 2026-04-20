@@ -94,7 +94,7 @@
             </div>
 
             <div class="flex items-center justify-between pt-2">
-                <a href="{{ url('/') }}" class="text-sm text-slate-300 hover:text-violet-300 transition">← Back to Home</a>
+                <a href="{{ url('/') }}" class="text-sm text-slate-300 hover:text-violet-300 transition">Back to home</a>
                 <button class="rr-btn-primary inline-flex justify-center items-center rounded-lg px-6 py-2.5 text-sm font-semibold shadow-lg transition">
                     Register
                 </button>

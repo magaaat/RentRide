@@ -3,18 +3,46 @@
 namespace App\Support;
 
 use App\Models\Booking;
+use App\Models\SubscriptionPlan;
 
 /**
  * Subscription plan limits (vehicle caps, monthly booking caps for Basic).
+ * Limits use **feature_tier** (basic / standard / premium) on the plan row, not the marketing tier label or key.
  */
 class PlanLimits
 {
     /** Basic plan: max new bookings created per calendar month (admin + customer portal). */
     public const BASIC_MONTHLY_BOOKINGS = 40;
 
-    public static function vehicleLimit(?string $plan): ?int
+    /**
+     * Resolve feature tier from a subscription_plans.key stored on the tenant.
+     */
+    public static function resolveTier(?string $planKey): string
     {
-        return match ($plan) {
+        if ($planKey === null || $planKey === '') {
+            return 'basic';
+        }
+
+        $plan = SubscriptionPlan::query()->where('key', $planKey)->first();
+        if ($plan) {
+            $ft = $plan->feature_tier;
+            if ($ft && in_array($ft, ['basic', 'standard', 'premium'], true)) {
+                return $ft;
+            }
+            $t = $plan->tier;
+            if ($t && in_array($t, ['basic', 'standard', 'premium'], true)) {
+                return $t;
+            }
+        }
+
+        return in_array($planKey, ['basic', 'standard', 'premium'], true) ? $planKey : 'basic';
+    }
+
+    public static function vehicleLimit(?string $planKey): ?int
+    {
+        $tier = self::resolveTier($planKey);
+
+        return match ($tier) {
             'basic' => 5,
             'standard' => 15,
             'premium' => null,
@@ -25,9 +53,11 @@ class PlanLimits
     /**
      * Max bookings that can be created this month, or null = unlimited.
      */
-    public static function monthlyBookingCreationLimit(?string $plan): ?int
+    public static function monthlyBookingCreationLimit(?string $planKey): ?int
     {
-        return match ($plan) {
+        $tier = self::resolveTier($planKey);
+
+        return match ($tier) {
             'basic' => self::BASIC_MONTHLY_BOOKINGS,
             'standard', 'premium' => null,
             default => null,

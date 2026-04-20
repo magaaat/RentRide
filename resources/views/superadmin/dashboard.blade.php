@@ -5,7 +5,7 @@
 @section('content')
 <div class="mb-8">
     <h1 class="text-2xl font-semibold tracking-tight text-slate-50 sm:text-3xl">Super Admin dashboard</h1>
-    <p class="mt-2 text-sm text-slate-400">Platform overview and key metrics.</p>
+    <p class="mt-2 text-sm text-slate-400">Overview</p>
 </div>
 
 <div class="grid grid-cols-1 gap-5 md:grid-cols-3">

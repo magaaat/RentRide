@@ -10,7 +10,7 @@
     </div>
 
     <div class="rr-panel-elevated p-6">
-        <form method="POST" action="{{ route('admin.staff.store') }}" class="space-y-5">
+        <form method="POST" action="{{ route('admin.staff.store') }}" class="space-y-5" id="staff-create-form">
             @csrf
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -23,15 +23,26 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <input type="hidden" name="generate_password" value="0">
+                <label class="inline-flex cursor-pointer items-start gap-3">
+                    <input type="checkbox" name="generate_password" value="1" id="generate_password" class="mt-1 size-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500" @checked(old('generate_password', '1') == '1')>
+                    <span>
+                        <span class="block text-sm font-semibold text-slate-800">Generate secure password automatically</span>
+                        <span class="block text-xs text-slate-500">A random password is created and emailed to the staff member (recommended).</span>
+                    </span>
+                </label>
+            </div>
+
+            <div id="manual-password-fields" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                     <label class="rr-label">Password</label>
-                    <input type="password" name="password" required class="rr-input" minlength="8" autocomplete="new-password">
-                    <p class="mt-1 text-xs text-slate-500">Minimum 8 characters.</p>
+                    <input type="password" name="password" id="staff_password" class="rr-input" minlength="8" autocomplete="new-password">
+                    <p class="mt-1 text-xs text-slate-500">Minimum 8 characters when not using auto-generate.</p>
                 </div>
                 <div>
                     <label class="rr-label">Confirm password</label>
-                    <input type="password" name="password_confirmation" required class="rr-input" minlength="8" autocomplete="new-password">
+                    <input type="password" name="password_confirmation" id="staff_password_confirmation" class="rr-input" minlength="8" autocomplete="new-password">
                 </div>
             </div>
 
@@ -77,27 +88,51 @@
     document.addEventListener('DOMContentLoaded', function () {
         const roleSelect = document.getElementById('role');
         const permissionGrid = document.getElementById('permission-grid');
+        const genCheckbox = document.getElementById('generate_password');
+        const manualBlock = document.getElementById('manual-password-fields');
+        const pwd = document.getElementById('staff_password');
+        const pwd2 = document.getElementById('staff_password_confirmation');
+
         const roleDefaults = @json($defaultPermissionsByRole);
         const hasOldPermissions = @json($hasOldPermissions);
 
-        if (!roleSelect || !permissionGrid) return;
+        if (roleSelect && permissionGrid) {
+            const applyDefaults = (roleKey) => {
+                const defaults = roleDefaults[roleKey] || [];
+                const checkboxes = permissionGrid.querySelectorAll('input[type="checkbox"][name="permissions[]"]');
+                checkboxes.forEach((box) => {
+                    box.checked = defaults.includes(box.value);
+                });
+            };
 
-        const applyDefaults = (roleKey) => {
-            const defaults = roleDefaults[roleKey] || [];
-            const checkboxes = permissionGrid.querySelectorAll('input[type="checkbox"][name="permissions[]"]');
-            checkboxes.forEach((box) => {
-                box.checked = defaults.includes(box.value);
+            if (!hasOldPermissions) {
+                applyDefaults(roleSelect.value);
+            }
+
+            roleSelect.addEventListener('change', function () {
+                applyDefaults(roleSelect.value);
             });
-        };
-
-        if (!hasOldPermissions) {
-            applyDefaults(roleSelect.value);
         }
 
-        roleSelect.addEventListener('change', function () {
-            applyDefaults(roleSelect.value);
-        });
+        const syncPasswordFields = () => {
+            const auto = genCheckbox && genCheckbox.checked;
+            if (manualBlock) {
+                manualBlock.style.display = auto ? 'none' : '';
+            }
+            if (pwd && pwd2) {
+                pwd.required = !auto;
+                pwd2.required = !auto;
+                if (auto) {
+                    pwd.value = '';
+                    pwd2.value = '';
+                }
+            }
+        };
+
+        if (genCheckbox) {
+            genCheckbox.addEventListener('change', syncPasswordFields);
+            syncPasswordFields();
+        }
     });
 </script>
 @endsection
-

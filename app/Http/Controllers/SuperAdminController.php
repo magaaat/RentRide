@@ -149,12 +149,16 @@ class SuperAdminController extends Controller
             ->get();
 
         $planDisplayName = SubscriptionPlan::where('key', $tenant->subscription_plan)->value('name');
+        $tenantDatabaseName = TenantDatabaseName::fromTenancyData(
+            TenancyTenant::query()->find((string) $tenant->id)
+        );
 
         return view('superadmin.tenants.show', compact(
             'tenant',
             'pendingExtension',
             'subscriptionPlans',
-            'planDisplayName'
+            'planDisplayName',
+            'tenantDatabaseName'
         ));
     }
 

@@ -166,8 +166,7 @@ class CustomerPortalController extends Controller
                 ->withInput();
         }
 
-        $plan = $tenant->subscription_plan ?? 'basic';
-        if (! PlanLimits::canCreateBooking($plan, $tenant->id)) {
+        if (! PlanLimits::canCreateBooking($tenant->subscription_plan, $tenant->id)) {
             return back()
                 ->withErrors([
                     'plan' => 'This rental company has reached its monthly booking limit on the Basic plan. Please try again next month or choose another company.',

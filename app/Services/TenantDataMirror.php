@@ -20,7 +20,7 @@ use Throwable;
  * Mirrors tenant-scoped rows from the central DB into each tenant's own database.
  *
  * The main app always writes to the central database first; this service copies
- * the same rows so tools inspecting tenant_* DBs see the data.
+ * the same rows so tools inspecting tenant mirror DBs see the data.
  */
 class TenantDataMirror
 {

@@ -3,10 +3,13 @@
 @section('title', 'Record Payment')
 
 @section('content')
+@php
+    $defaultAmount = old('amount', $booking->payment?->amount ?? $booking->calculateTotalAmount());
+@endphp
 <div class="mx-auto max-w-3xl">
     <div class="mb-8">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-50">Record payment</h1>
-        <p class="mt-1 text-sm text-slate-400">Booking #{{ $booking->id }}</p>
+        <p class="mt-1 text-sm text-slate-400">Booking #{{ $booking->id }} — amount is usually (days × daily rate). Mark as paid when you receive cash or other settlement.</p>
     </div>
 
     <div class="rr-panel-elevated p-6 sm:p-8">
@@ -14,25 +17,33 @@
             @csrf
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
                 <div>
-                    <label class="rr-label" for="amount">Amount</label>
-                    <input id="amount" type="number" step="0.01" name="amount" value="{{ old('amount') }}" required class="rr-input">
+                    <label class="rr-label" for="amount">Amount (₱)</label>
+                    <input id="amount" type="number" step="0.01" name="amount" value="{{ $defaultAmount }}" required class="rr-input">
                 </div>
                 <div>
                     <label class="rr-label" for="payment_method">Payment method</label>
-                    <input id="payment_method" type="text" name="payment_method" value="{{ old('payment_method') }}" required class="rr-input">
+                    <select id="payment_method" name="payment_method" class="rr-input">
+                        @php
+                            $methods = ['cash' => 'Cash', 'gcash' => 'GCash', 'bank_transfer' => 'Bank transfer', 'card' => 'Card', 'other' => 'Other'];
+                            $currentMethod = old('payment_method', $booking->payment && $booking->payment->payment_method !== 'pending' ? $booking->payment->payment_method : 'cash');
+                        @endphp
+                        @foreach($methods as $value => $label)
+                            <option value="{{ $value }}" @selected($currentMethod === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div>
                     <label class="rr-label" for="payment_status">Status</label>
                     <select id="payment_status" name="payment_status" class="rr-input">
                         @foreach(['pending','paid','failed','refunded'] as $status)
-                            <option value="{{ $status }}">{{ ucfirst($status) }}</option>
+                            <option value="{{ $status }}" @selected(old('payment_status', $booking->payment?->payment_status ?? 'pending') === $status)>{{ ucfirst($status) }}</option>
                         @endforeach
                     </select>
                 </div>
             </div>
             <div class="max-w-xs">
                 <label class="rr-label" for="payment_date">Payment date</label>
-                <input id="payment_date" type="date" name="payment_date" value="{{ old('payment_date', now()->format('Y-m-d')) }}" class="rr-input">
+                <input id="payment_date" type="date" name="payment_date" value="{{ old('payment_date', optional($booking->payment?->payment_date)->format('Y-m-d') ?? now()->format('Y-m-d')) }}" class="rr-input">
             </div>
             <div class="flex flex-wrap gap-3 pt-2">
                 <button type="submit" class="inline-flex items-center rounded-lg rr-btn-primary px-5 py-2.5 text-sm font-semibold shadow-sm">Save</button>
@@ -59,7 +70,7 @@
                 icon: isPaid ? 'question' : 'warning',
                 title: isPaid ? 'Confirm payment as paid?' : 'Save payment record?',
                 text: isPaid
-                    ? 'Marking as paid will auto-confirm the related booking.'
+                    ? 'Marking as paid will confirm the booking (if it was pending) and mark the vehicle as rented when applicable.'
                     : 'This will save the payment status for this booking.',
                 showCancelButton: true,
                 confirmButtonText: isPaid ? 'Yes, mark paid' : 'Yes, save payment',
