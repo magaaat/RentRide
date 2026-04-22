@@ -36,6 +36,11 @@
                 </label>
                 <a href="{{ url('/forgot-password?from=superadmin') }}" class="rr-link-accent font-medium">Forgot password?</a>
             </div>
+            @if(!empty(config('services.recaptcha.site_key')))
+                <div class="flex justify-center">
+                    <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+                </div>
+            @endif
             <button type="submit" class="rr-btn-primary w-full inline-flex justify-center items-center rounded-lg py-2.5 text-sm font-semibold shadow-lg transition">
                 Login
             </button>
@@ -46,3 +51,9 @@
     </div>
 </div>
 @endsection
+
+@if(!empty(config('services.recaptcha.site_key')))
+    @push('scripts')
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    @endpush
+@endif

@@ -6,7 +6,7 @@
 <div class="mx-auto max-w-3xl">
     <div class="mb-8">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-50">Add customer</h1>
-        <p class="mt-1 text-sm text-slate-400">Create a customer record for your rental company.</p>
+        <p class="mt-1 text-sm text-slate-400">Create a customer record and auto-generate customer login credentials.</p>
     </div>
 
     <div class="rr-panel-elevated p-6 sm:p-8">
@@ -19,7 +19,8 @@
                 </div>
                 <div>
                     <label class="rr-label" for="email">Email</label>
-                    <input id="email" type="email" name="email" value="{{ old('email') }}" class="rr-input">
+                    <input id="email" type="email" name="email" value="{{ old('email') }}" required class="rr-input">
+                    <p class="mt-1 text-xs text-slate-500">A temporary password will be sent to this email.</p>
                 </div>
                 <div>
                     <label class="rr-label" for="phone">Phone</label>

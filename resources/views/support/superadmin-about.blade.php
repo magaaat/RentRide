@@ -6,6 +6,16 @@
 <div class="mx-auto max-w-6xl">
     <h1 class="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Tenant support messages</h1>
     <p class="mt-2 text-sm text-slate-600">Review incoming inquiries submitted by tenant users.</p>
+    @if(session('status'))
+        <div class="mt-4 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            {{ session('status') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="mt-4 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            {{ session('error') }}
+        </div>
+    @endif
 
     <div class="mt-8">
         <div class="rounded-xl border rr-border rr-surface p-6 shadow-rr">
@@ -104,3 +114,14 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const thread = document.getElementById('superadmin-chat-thread');
+        if (thread) {
+            thread.scrollTop = thread.scrollHeight;
+        }
+    });
+</script>
+@endpush

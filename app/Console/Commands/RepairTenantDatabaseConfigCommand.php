@@ -91,6 +91,38 @@ class RepairTenantDatabaseConfigCommand extends Command
                 // Best effort only.
             }
 
+            // Keep tenant vehicles table compatible with maintenance tracking fields.
+            try {
+                DB::statement("ALTER TABLE `$dbName`.`vehicles` ADD COLUMN maintenance_issue TEXT NULL AFTER description");
+            } catch (\Throwable $e) {
+                // Best effort only.
+            }
+            try {
+                DB::statement("ALTER TABLE `$dbName`.`vehicles` ADD COLUMN maintenance_severity ENUM('low','medium','high','critical') NULL AFTER maintenance_issue");
+            } catch (\Throwable $e) {
+                // Best effort only.
+            }
+            try {
+                DB::statement("ALTER TABLE `$dbName`.`vehicles` ADD COLUMN maintenance_reported_at DATE NULL AFTER maintenance_severity");
+            } catch (\Throwable $e) {
+                // Best effort only.
+            }
+            try {
+                DB::statement("ALTER TABLE `$dbName`.`vehicles` ADD COLUMN maintenance_target_fix_at DATE NULL AFTER maintenance_reported_at");
+            } catch (\Throwable $e) {
+                // Best effort only.
+            }
+            try {
+                DB::statement("ALTER TABLE `$dbName`.`vehicles` ADD COLUMN maintenance_fixed_at DATE NULL AFTER maintenance_target_fix_at");
+            } catch (\Throwable $e) {
+                // Best effort only.
+            }
+            try {
+                DB::statement("ALTER TABLE `$dbName`.`vehicles` ADD COLUMN maintenance_cost_estimate DECIMAL(10,2) NULL AFTER maintenance_fixed_at");
+            } catch (\Throwable $e) {
+                // Best effort only.
+            }
+
             TenancyDomain::firstOrCreate([
                 'tenant_id' => (string) $tenant->id,
                 'domain' => (string) $tenant->domain,

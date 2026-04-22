@@ -24,6 +24,8 @@ return [
     'github_token' => env('GITHUB_TOKEN', ''),
     'github_release_cache_minutes' => (int) env('GITHUB_RELEASE_CACHE_MINUTES', 30),
     'github_release_timeout_seconds' => (int) env('GITHUB_RELEASE_TIMEOUT_SECONDS', 5),
+    'github_release_verify_ssl' => (bool) env('GITHUB_RELEASE_VERIFY_SSL', true),
+    'update_test_module_min_version' => env('UPDATE_TEST_MODULE_MIN_VERSION', 'v1.0.3'),
 
     'support_email' => env('SUPPORT_EMAIL', ''),
 

@@ -11,10 +11,12 @@ use App\Mail\PasswordResetCodeMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -319,7 +321,11 @@ class AuthController extends Controller
         $validated = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
+            'g-recaptcha-response' => $this->shouldValidateRecaptcha()
+                ? ['required', 'string']
+                : ['nullable', 'string'],
         ]);
+        $this->assertRecaptchaValid($request);
 
         $credentials = [
             'email' => $validated['email'],
@@ -355,7 +361,11 @@ class AuthController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required'],
             'login_tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
+            'g-recaptcha-response' => $this->shouldValidateRecaptcha()
+                ? ['required', 'string']
+                : ['nullable', 'string'],
         ]);
+        $this->assertRecaptchaValid($request);
 
         $credentials = [
             'email' => $validated['email'],
@@ -724,6 +734,50 @@ class AuthController extends Controller
         }
 
         return view('auth.tenant-login', compact('tenant'));
+    }
+
+    protected function shouldValidateRecaptcha(): bool
+    {
+        return trim((string) config('services.recaptcha.site_key', '')) !== ''
+            && trim((string) config('services.recaptcha.secret_key', '')) !== '';
+    }
+
+    protected function assertRecaptchaValid(Request $request): void
+    {
+        if (! $this->shouldValidateRecaptcha()) {
+            return;
+        }
+
+        $secret = trim((string) config('services.recaptcha.secret_key', ''));
+        $token = trim((string) $request->input('g-recaptcha-response', ''));
+        $verifySsl = (bool) config('services.recaptcha.verify_ssl', true);
+
+        try {
+            $http = Http::asForm()->timeout(10);
+            if (! $verifySsl) {
+                $http = $http->withoutVerifying();
+            }
+
+            $response = $http->post('https://www.google.com/recaptcha/api/siteverify', [
+                    'secret' => $secret,
+                    'response' => $token,
+                    'remoteip' => $request->ip(),
+                ]);
+        } catch (\Throwable $e) {
+            report($e);
+            throw ValidationException::withMessages([
+                'g-recaptcha-response' => 'Unable to validate reCAPTCHA at the moment. Please try again.',
+            ]);
+        }
+
+        $payload = $response->json();
+        $isValid = $response->successful() && is_array($payload) && ($payload['success'] ?? false) === true;
+
+        if (! $isValid) {
+            throw ValidationException::withMessages([
+                'g-recaptcha-response' => 'reCAPTCHA validation failed. Please try again.',
+            ]);
+        }
     }
 }
 

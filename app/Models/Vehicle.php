@@ -17,7 +17,20 @@ class Vehicle extends Model
         'price_per_day',
         'status',
         'description',
+        'maintenance_issue',
+        'maintenance_severity',
+        'maintenance_reported_at',
+        'maintenance_target_fix_at',
+        'maintenance_fixed_at',
+        'maintenance_cost_estimate',
         'image',
+    ];
+
+    protected $casts = [
+        'maintenance_reported_at' => 'date',
+        'maintenance_target_fix_at' => 'date',
+        'maintenance_fixed_at' => 'date',
+        'maintenance_cost_estimate' => 'decimal:2',
     ];
 
     public function tenant(): BelongsTo

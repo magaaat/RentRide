@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class StaffController extends Controller
 {
@@ -74,7 +73,7 @@ class StaffController extends Controller
             'is_active' => ['nullable', 'boolean'],
             'generate_password' => ['nullable', 'in:0,1'],
             'password' => [
-                Rule::requiredUnless('generate_password', '1'),
+                'required_unless:generate_password,1',
                 'nullable',
                 'string',
                 'min:8',

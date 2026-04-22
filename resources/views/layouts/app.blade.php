@@ -558,6 +558,12 @@
                 $canBookings = $tenantUser->hasPermission('bookings.manage');
                 $canPayments = $tenantUser->hasPermission('payments.manage');
                 $canStaff = $tenantUser->canManageStaff();
+                $updateModuleMinVersion = (string) config('rentride.update_test_module_min_version', 'v1.0.3');
+                $runtimeVersion = \App\Support\TenantRuntimeVersion::currentForTenant(
+                    tenantId: (int) $tenantUser->tenant_id,
+                    fallbackVersion: (string) config('rentride.version', '')
+                );
+                $hasUpdatedModule = \App\Support\TenantRuntimeVersion::isAtLeast($runtimeVersion, $updateModuleMinVersion);
                 $navActive = 'bg-white text-slate-900 border border-slate-200 shadow-sm';
                 $navIdle = 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent';
             @endphp
@@ -598,6 +604,9 @@
             @endif
             @if($canStaff)
                 <a href="{{ route('admin.staff.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.staff.*') ? $navActive : $navIdle }}">Staff</a>
+            @endif
+            @if($hasUpdatedModule)
+                <a href="{{ route('admin.updated-module') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.updated-module') ? $navActive : $navIdle }}">Updated module</a>
             @endif
             <a href="{{ route('admin.about') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.about', 'admin.support') ? $navActive : $navIdle }}">About</a>
         @else

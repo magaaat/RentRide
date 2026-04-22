@@ -52,6 +52,12 @@ class VehicleController extends TenantControllerBase
             'price_per_day' => 'required|numeric|min:0',
             'status' => 'required|in:available,rented,maintenance,inactive',
             'description' => 'nullable|string',
+            'maintenance_issue' => 'nullable|required_if:status,maintenance|string|max:2000',
+            'maintenance_severity' => 'nullable|required_if:status,maintenance|in:low,medium,high,critical',
+            'maintenance_reported_at' => 'nullable|required_if:status,maintenance|date',
+            'maintenance_target_fix_at' => 'nullable|date|after_or_equal:maintenance_reported_at',
+            'maintenance_fixed_at' => 'nullable|date|after_or_equal:maintenance_reported_at',
+            'maintenance_cost_estimate' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|max:2048',
         ]);
 
@@ -85,6 +91,12 @@ class VehicleController extends TenantControllerBase
             'price_per_day' => 'required|numeric|min:0',
             'status' => 'required|in:available,rented,maintenance,inactive',
             'description' => 'nullable|string',
+            'maintenance_issue' => 'nullable|required_if:status,maintenance|string|max:2000',
+            'maintenance_severity' => 'nullable|required_if:status,maintenance|in:low,medium,high,critical',
+            'maintenance_reported_at' => 'nullable|required_if:status,maintenance|date',
+            'maintenance_target_fix_at' => 'nullable|date|after_or_equal:maintenance_reported_at',
+            'maintenance_fixed_at' => 'nullable|date|after_or_equal:maintenance_reported_at',
+            'maintenance_cost_estimate' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|max:2048',
         ]);
 

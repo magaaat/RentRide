@@ -29,6 +29,8 @@ class Tenant extends Model
         'subscription_plan',
         'subscription_expiry',
         'is_featured',
+        'app_version',
+        'app_version_applied_at',
     ];
 
     protected $casts = [
@@ -36,6 +38,7 @@ class Tenant extends Model
         'is_featured' => 'boolean',
         'subscription_expiry' => 'date',
         'staff_role_permissions' => 'array',
+        'app_version_applied_at' => 'datetime',
     ];
 
     /**
@@ -85,6 +88,28 @@ class Tenant extends Model
     public function planExtensionRequests(): HasMany
     {
         return $this->hasMany(PlanExtensionRequest::class);
+    }
+
+    public function updateRequests(): HasMany
+    {
+        return $this->hasMany(TenantUpdateRequest::class);
+    }
+
+    public function hasAppVersionAtLeast(string $minimumVersion): bool
+    {
+        $current = ltrim(trim((string) ($this->app_version ?? '')), 'vV');
+        $minimum = ltrim(trim($minimumVersion), 'vV');
+
+        if ($current === '' || $minimum === '') {
+            return false;
+        }
+
+        $looksComparable = static fn (string $v): bool => (bool) preg_match('/^\d+(\.\d+){0,3}([\-+].*)?$/', $v);
+        if (! $looksComparable($current) || ! $looksComparable($minimum)) {
+            return false;
+        }
+
+        return version_compare($current, $minimum, '>=');
     }
 
     /**

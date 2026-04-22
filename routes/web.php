@@ -112,8 +112,10 @@ Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
         Route::put('/admin/my-profile', [TenantUserProfileController::class, 'update'])->name('tenant.staff-profile.update');
 
         Route::get('/admin/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
+        Route::get('/admin/updated-module', [DashboardController::class, 'updatedModule'])->name('admin.updated-module');
         Route::get('/admin/about', [SupportController::class, 'tenantAbout'])->name('admin.about');
         Route::post('/admin/about/messages', [SupportController::class, 'storeTenantInquiry'])->name('admin.about.messages.store');
+        Route::post('/admin/about/download-update', [SupportController::class, 'downloadTenantUpdate'])->name('admin.about.update.download');
         Route::get('/admin/support', fn () => redirect()->route('admin.about'))->name('admin.support');
 
         Route::get('/admin/reports', [TenantReportController::class, 'index'])
