@@ -47,7 +47,7 @@
                     <p class="mt-2 text-xs text-slate-500">Base platform version: {{ $config['version'] }}</p>
                 @endif
                 @if(!empty($runtimeAppliedAt))
-                    <p class="mt-1 text-xs text-slate-500">Last applied on this device: {{ \Illuminate\Support\Carbon::parse($runtimeAppliedAt)->format('M d, Y h:i A') }}</p>
+                    <p class="mt-1 text-xs text-slate-500">Last applied update: {{ \Illuminate\Support\Carbon::parse($runtimeAppliedAt)->format('M d, Y h:i A') }}</p>
                 @endif
             </div>
 
@@ -92,24 +92,15 @@
                 @endif
                 <div class="mt-4">
                     @if(($releaseInfo['available'] ?? false) && !empty($releaseInfo['tag_name']))
-                        @if(!empty($releaseInfo['asset_download_url']))
-                            <form method="POST" action="{{ route('admin.about.update.download') }}" class="mb-2">
-                                @csrf
-                                <button
-                                    type="submit"
-                                    class="inline-flex items-center rounded-lg rr-btn-primary px-3.5 py-2 text-xs font-semibold">
-                                    Download update
-                                </button>
-                            </form>
-                        @else
+                        <form method="POST" action="{{ route('admin.about.update.download') }}" class="mb-2">
+                            @csrf
                             <button
-                                type="button"
-                                disabled
-                                class="inline-flex cursor-not-allowed items-center rounded-lg border border-slate-300 bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-500">
+                                type="submit"
+                                class="inline-flex items-center rounded-lg rr-btn-primary px-3.5 py-2 text-xs font-semibold">
                                 Download update
                             </button>
-                            <p class="mt-2 text-xs text-slate-500">Upload a release asset on GitHub to enable automatic download.</p>
-                        @endif
+                        </form>
+                        <p class="mt-2 text-xs text-slate-500">Downloads and applies the selected release on this device, then updates tenant access.</p>
                     @endif
                 </div>
                 @if($latestTenantUpdate)

@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Models\TenantChatMessage;
 use App\Models\TenantInquiry;
 use App\Models\TenantUpdateRequest;
+use App\Support\TenantReleaseUpdater;
 use App\Support\TenantRuntimeVersion;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
@@ -15,8 +16,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Throwable;
 
 class SupportController extends Controller
 {
@@ -81,7 +82,7 @@ class SupportController extends Controller
             ->route('admin.about');
     }
 
-    public function downloadTenantUpdate(Request $request): RedirectResponse
+    public function downloadTenantUpdate(Request $request, TenantReleaseUpdater $updater): RedirectResponse
     {
         $user = Auth::user();
         abort_unless($user?->isTenantUser() && $user->tenant_id, 403);
@@ -108,28 +109,38 @@ class SupportController extends Controller
             $releaseLabel .= ' (pre-release)';
         }
 
-        $downloadHref = trim((string) ($releaseInfo['asset_download_url'] ?? ''));
-        if ($downloadHref === '') {
-            return redirect()
-                ->route('admin.about')
-                ->with('error', 'Automatic download requires a release asset file. Upload an asset in GitHub Releases first.');
-        }
+        try {
+            $result = $updater->applyTag($targetVersion);
+        } catch (Throwable $e) {
+            report($e);
 
-        $savedPackagePath = $this->downloadTenantReleasePackage(
-            tenantId: (int) $tenant->id,
-            version: $targetVersion,
-            url: $downloadHref,
-        );
-        if ($savedPackagePath === null) {
+            TenantUpdateRequest::query()->create([
+                'tenant_id' => (int) $tenant->id,
+                'requested_by' => (int) $user->id,
+                'target_version' => $targetVersion,
+                'source_release_url' => trim((string) ($releaseInfo['html_url'] ?? '')),
+                'is_draft' => (bool) ($releaseInfo['is_draft'] ?? false),
+                'is_prerelease' => (bool) ($releaseInfo['is_prerelease'] ?? false),
+                'status' => TenantUpdateRequest::STATUS_FAILED,
+            ]);
+
+            TenantChatMessage::query()->create([
+                'tenant_id' => (int) $tenant->id,
+                'user_id' => (int) $user->id,
+                'sender_role' => TenantChatMessage::SENDER_TENANT,
+                'message' => "[Tenant Update Failed]\n"
+                    . "Version: {$releaseLabel}\n"
+                    . "Reason: " . trim($e->getMessage()),
+            ]);
+
             return redirect()
                 ->route('admin.about')
-                ->with('error', 'Failed to download release package automatically. Check GitHub token/asset visibility.');
+                ->with('error', 'Update failed on this device. ' . trim($e->getMessage()));
         }
 
         TenantRuntimeVersion::setApplied(
             tenantId: (int) $tenant->id,
-            version: $targetVersion,
-            packagePath: $savedPackagePath
+            version: $targetVersion
         );
 
         $updateLog = TenantUpdateRequest::query()->create([
@@ -145,9 +156,10 @@ class SupportController extends Controller
         ]);
 
         $message = "[Tenant Update Applied]\n"
-            . "Tenant downloaded and applied {$releaseLabel} on this device.\n"
+            . "Tenant applied {$releaseLabel} by running update commands on this device.\n"
             . "Update Log ID: #{$updateLog->id}\n"
-            . "Package: {$savedPackagePath}\n"
+            . "Release URL: " . trim((string) ($releaseInfo['html_url'] ?? 'N/A')) . "\n"
+            . "Updater steps: " . count($result['steps'] ?? []) . "\n"
             . "Applied by: {$user->name}";
 
         TenantChatMessage::query()->create([
@@ -159,7 +171,7 @@ class SupportController extends Controller
 
         return redirect()
             ->route('admin.about')
-            ->with('status', "Update {$releaseLabel} downloaded and applied on this device for this tenant.");
+            ->with('status', "Update {$releaseLabel} applied for this tenant and synced across devices.");
     }
 
     public function superAdminAbout(Request $request): View
@@ -391,9 +403,18 @@ class SupportController extends Controller
             return $assetUrl;
         }
 
-        // Avoid GitHub API archive URLs (zipball/tarball) for browser redirects.
-        // They can fail without API auth and return JSON 404 responses.
-        return trim((string) ($release['html_url'] ?? ''));
+        // For tenant-side server downloads, use release archives when no asset exists.
+        $zipballUrl = trim((string) ($release['zipball_url'] ?? ''));
+        if ($zipballUrl !== '') {
+            return $zipballUrl;
+        }
+
+        $tarballUrl = trim((string) ($release['tarball_url'] ?? ''));
+        if ($tarballUrl !== '') {
+            return $tarballUrl;
+        }
+
+        return '';
     }
 
     protected function resolveReleaseAssetDownloadUrl(array $release): string
@@ -409,44 +430,6 @@ class SupportController extends Controller
         }
 
         return '';
-    }
-
-    protected function downloadTenantReleasePackage(int $tenantId, string $version, string $url): ?string
-    {
-        $token = trim((string) config('rentride.github_token', ''));
-        $verifySsl = (bool) config('rentride.github_release_verify_ssl', true);
-
-        $request = Http::timeout(120)->withHeaders([
-            'User-Agent' => 'RentRide-App',
-        ]);
-        if (! $verifySsl) {
-            $request = $request->withoutVerifying();
-        }
-        if ($token !== '') {
-            $request = $request->withToken($token);
-        }
-
-        try {
-            $response = $request->get($url);
-        } catch (ConnectionException) {
-            return null;
-        }
-
-        if (! $response->successful()) {
-            return null;
-        }
-
-        $filename = basename((string) parse_url($url, PHP_URL_PATH));
-        if ($filename === '' || $filename === '/') {
-            $filename = 'release-package.zip';
-        }
-        $filename = preg_replace('/[^A-Za-z0-9._-]/', '_', $filename) ?: 'release-package.zip';
-        $versionSafe = preg_replace('/[^A-Za-z0-9._-]/', '_', $version) ?: 'unknown';
-        $path = "tenant-updates/tenant-{$tenantId}/{$versionSafe}/{$filename}";
-
-        Storage::disk('local')->put($path, $response->body());
-
-        return $path;
     }
 
     protected function extractGithubRepo(string $url): ?string

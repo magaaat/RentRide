@@ -10,6 +10,7 @@ class TenantUpdateRequest extends Model
     public const STATUS_PENDING = 'pending';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_APPLIED = 'applied';
+    public const STATUS_FAILED = 'failed';
 
     protected $fillable = [
         'tenant_id',

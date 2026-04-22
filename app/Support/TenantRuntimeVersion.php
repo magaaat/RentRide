@@ -2,35 +2,40 @@
 
 namespace App\Support;
 
-use Illuminate\Support\Facades\Storage;
+use App\Models\Tenant;
 
 class TenantRuntimeVersion
 {
     public static function currentForTenant(int $tenantId, string $fallbackVersion): string
     {
-        $record = self::read($tenantId);
-        $version = trim((string) ($record['version'] ?? ''));
+        $tenant = Tenant::query()->find($tenantId);
+        if (! $tenant) {
+            return $fallbackVersion;
+        }
+
+        $version = trim((string) ($tenant->app_version ?? ''));
 
         return $version !== '' ? $version : $fallbackVersion;
     }
 
     public static function appliedAtForTenant(int $tenantId): ?string
     {
-        $record = self::read($tenantId);
-        $appliedAt = trim((string) ($record['applied_at'] ?? ''));
+        $tenant = Tenant::query()->find($tenantId);
+        if (! $tenant || ! $tenant->app_version_applied_at) {
+            return null;
+        }
 
-        return $appliedAt !== '' ? $appliedAt : null;
+        return $tenant->app_version_applied_at->toIso8601String();
     }
 
-    public static function setApplied(int $tenantId, string $version, string $packagePath): void
+    public static function setApplied(int $tenantId, string $version): void
     {
-        $payload = [
-            'version' => trim($version),
-            'package_path' => trim($packagePath),
-            'applied_at' => now()->toIso8601String(),
-        ];
-
-        Storage::disk('local')->put(self::path($tenantId), json_encode($payload, JSON_PRETTY_PRINT));
+        Tenant::query()
+            ->whereKey($tenantId)
+            ->update([
+                'app_version' => trim($version),
+                'app_version_applied_at' => now(),
+            ]);
     }
 
     public static function isAtLeast(string $currentVersion, string $minimumVersion): bool
@@ -49,21 +54,4 @@ class TenantRuntimeVersion
         return version_compare($current, $minimum, '>=');
     }
 
-    protected static function path(int $tenantId): string
-    {
-        return "tenant-runtime/tenant-{$tenantId}.json";
-    }
-
-    protected static function read(int $tenantId): array
-    {
-        $path = self::path($tenantId);
-        if (! Storage::disk('local')->exists($path)) {
-            return [];
-        }
-
-        $raw = Storage::disk('local')->get($path);
-        $decoded = json_decode($raw, true);
-
-        return is_array($decoded) ? $decoded : [];
-    }
 }
