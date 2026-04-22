@@ -8,6 +8,9 @@
     <p class="mt-2 text-sm text-slate-600">
         This page is visible only to tenants whose applied version is at least <span class="font-semibold">{{ $minimumVersion }}</span>.
     </p>
+    <div class="mt-4 rounded-lg border border-violet-300 bg-violet-50 px-4 py-3 text-sm text-violet-900">
+        Release test marker: module UI updated in test branch.
+    </div>
 
     <div class="mt-6 rounded-xl border rr-border rr-surface p-6 shadow-rr">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-600">Tenant module access</h2>
