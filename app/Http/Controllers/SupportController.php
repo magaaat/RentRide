@@ -109,6 +109,9 @@ class SupportController extends Controller
             $releaseLabel .= ' (pre-release)';
         }
 
+        // Let the HTTP client release resources before spawning git (avoids rare Windows DNS/thread issues).
+        gc_collect_cycles();
+
         try {
             $result = $updater->applyTag($targetVersion);
         } catch (Throwable $e) {

@@ -30,6 +30,7 @@ return [
     'tenant_release_updater_timeout_seconds' => (int) env('TENANT_RELEASE_UPDATER_TIMEOUT_SECONDS', 300),
     'tenant_release_updater_composer_command' => env('TENANT_RELEASE_UPDATER_COMPOSER_COMMAND', 'composer'),
     'tenant_release_updater_php_command' => env('TENANT_RELEASE_UPDATER_PHP_COMMAND', 'php'),
+    'tenant_release_updater_git_command' => env('TENANT_RELEASE_UPDATER_GIT_COMMAND', 'git'),
 
     'support_email' => env('SUPPORT_EMAIL', ''),
 
