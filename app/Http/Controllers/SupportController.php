@@ -295,6 +295,7 @@ class SupportController extends Controller
     {
         $token = trim((string) config('rentride.github_token', ''));
         $verifySsl = (bool) config('rentride.github_release_verify_ssl', true);
+        $usedInsecureRetry = false;
 
         $request = Http::acceptJson()
             ->timeout($timeout)
@@ -313,7 +314,17 @@ class SupportController extends Controller
         try {
             $response = $request->get("https://api.github.com/repos/{$repo}/releases/latest");
         } catch (ConnectionException) {
-            return ['available' => false, 'reason' => 'connection_failed'];
+            if ($verifySsl) {
+                try {
+                    $response = $request->withoutVerifying()
+                        ->get("https://api.github.com/repos/{$repo}/releases/latest");
+                    $usedInsecureRetry = true;
+                } catch (ConnectionException) {
+                    return ['available' => false, 'reason' => 'connection_failed'];
+                }
+            } else {
+                return ['available' => false, 'reason' => 'connection_failed'];
+            }
         }
 
         if (! $response->successful()) {
@@ -349,6 +360,7 @@ class SupportController extends Controller
             'published_at' => trim((string) ($data['published_at'] ?? '')),
             'is_draft' => (bool) ($data['draft'] ?? false),
             'is_prerelease' => (bool) ($data['prerelease'] ?? false),
+            'used_insecure_retry' => $usedInsecureRetry,
         ];
     }
 

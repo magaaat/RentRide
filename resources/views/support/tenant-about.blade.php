@@ -67,6 +67,11 @@
                         @endif
                         .
                     </p>
+                    @if(($releaseInfo['used_insecure_retry'] ?? false))
+                        <p class="mt-1 text-xs text-amber-700">
+                            SSL verification failed once on this server, so the app retried without certificate verification to read the latest release.
+                        </p>
+                    @endif
                     <p class="mt-2 text-xs text-slate-600">
                         Release page:
                         <a href="{{ $releaseInfo['html_url'] ?: rtrim((string) $config['github_repo_url'], '/') . '/releases' }}" target="_blank" rel="noopener noreferrer" class="font-semibold text-violet-700 hover:text-violet-600">

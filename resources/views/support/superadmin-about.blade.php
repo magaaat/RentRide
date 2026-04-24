@@ -27,6 +27,9 @@
                     <a href="{{ $releaseInfo['html_url'] ?: rtrim((string) $config['github_repo_url'], '/') . '/releases' }}" target="_blank" rel="noopener noreferrer" class="font-semibold text-violet-700 hover:text-violet-600">
                         {{ $releaseInfo['tag_name'] }}
                     </a>
+                    @if(($releaseInfo['used_insecure_retry'] ?? false))
+                        <span class="mx-2 text-slate-400">•</span><span class="font-semibold text-amber-700">SSL fallback used</span>
+                    @endif
                     @if($versionStatus === 'up_to_date')
                         <span class="mx-2 text-slate-400">•</span><span class="font-semibold text-emerald-700">Up to date</span>
                     @elseif($versionStatus === 'behind')
