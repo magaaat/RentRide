@@ -38,14 +38,16 @@ class TenantReleaseUpdater
             throw new RuntimeException('Update blocked: working tree has local changes. Commit or stash them first.');
         }
 
-        $fetchCommand = $this->gitFetchTagsCommand($git);
-        $steps[] = $this->run(
-            $fetchCommand,
-            $basePath,
-            $timeout,
-            'Fetch latest tags',
-            'git fetch --tags origin'
-        );
+        // If the tag already exists locally (e.g. fetched manually), don't fail the update on network hiccups.
+        if (! $this->tagExistsLocally($git, $basePath, $timeout, $tag)) {
+            $steps[] = $this->fetchLatestTagsWithRetry($git, $basePath, $timeout);
+        } else {
+            $steps[] = [
+                'label' => 'Fetch latest tags',
+                'command' => 'git fetch --tags origin',
+                'output' => 'Skipped: target tag already exists locally.',
+            ];
+        }
         $steps[] = $this->run([$git, 'rev-parse', '-q', '--verify', "refs/tags/{$tag}"], $basePath, $timeout, 'Verify release tag exists', null);
         $steps[] = $this->run([$git, 'checkout', '--force', $tag], $basePath, $timeout, 'Checkout release tag', null);
         $steps[] = $this->run([$composer, 'install', '--no-interaction', '--prefer-dist', '--optimize-autoloader'], $basePath, $timeout, 'Install PHP dependencies', null);
@@ -80,6 +82,41 @@ class TenantReleaseUpdater
             'command' => $displayCommand ?? implode(' ', $command),
             'output' => trim($process->getOutput()),
         ];
+    }
+
+    protected function fetchLatestTagsWithRetry(string $git, string $cwd, int $timeout): array
+    {
+        $attempts = 3;
+        $lastError = null;
+
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            try {
+                return $this->run(
+                    $this->gitFetchTagsCommand($git),
+                    $cwd,
+                    $timeout,
+                    'Fetch latest tags',
+                    'git fetch --tags origin'
+                );
+            } catch (RuntimeException $e) {
+                $lastError = $e->getMessage();
+                if ($attempt < $attempts) {
+                    usleep(400_000);
+                }
+            }
+        }
+
+        throw new RuntimeException($lastError ?? 'Fetch latest tags failed.');
+    }
+
+    protected function tagExistsLocally(string $git, string $cwd, int $timeout, string $tag): bool
+    {
+        try {
+            $this->run([$git, 'rev-parse', '-q', '--verify', "refs/tags/{$tag}"], $cwd, $timeout, 'Check local tag', null);
+            return true;
+        } catch (RuntimeException) {
+            return false;
+        }
     }
 
     /**
