@@ -41,7 +41,7 @@ class Booking extends Model
     }
 
     /**
-     * Total rental price: inclusive calendar days × vehicle daily rate.
+     * Total rental price: rental day difference (minimum 1 day) × vehicle daily rate.
      */
     public function calculateTotalAmount(): float
     {
@@ -50,7 +50,7 @@ class Booking extends Model
             return 0.0;
         }
 
-        $days = $this->start_date->diffInDays($this->end_date) + 1;
+        $days = max(1, $this->start_date->diffInDays($this->end_date));
 
         return round(max(0, $days) * (float) $this->vehicle->price_per_day, 2);
     }

@@ -3,6 +3,13 @@
 @section('title', 'Tenant Profile')
 
 @section('content')
+@php
+    $isExpired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry);
+    $selectedPlanKey = old('subscription_plan', $tenant->subscription_plan);
+    $selectedTier = optional($subscriptionPlans->firstWhere('key', $selectedPlanKey))->feature_tier
+        ?? optional($subscriptionPlans->firstWhere('key', $selectedPlanKey))->tier
+        ?? $tenant->planTier();
+@endphp
 <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
         <h1 class="text-2xl font-semibold tracking-tight text-slate-50">Tenant profile</h1>
@@ -63,9 +70,13 @@
             <span class="rr-chip-accent inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">
                 Active
             </span>
+        @elseif($isExpired)
+            <span class="inline-flex items-center rounded-full bg-amber-400/10 px-2.5 py-0.5 text-xs font-semibold text-amber-300">
+                Expired
+            </span>
         @else
             <span class="inline-flex items-center rounded-full bg-slate-500/20 px-2.5 py-0.5 text-xs font-semibold text-slate-300">
-                Disabled
+                Maintenance
             </span>
         @endif
     </p>
@@ -105,12 +116,6 @@
 <form method="POST" action="{{ route('superadmin.tenants.update', $tenant) }}">
     @csrf
     @method('PUT')
-    @php
-        $selectedPlanKey = old('subscription_plan', $tenant->subscription_plan);
-        $selectedTier = optional($subscriptionPlans->firstWhere('key', $selectedPlanKey))->feature_tier
-            ?? optional($subscriptionPlans->firstWhere('key', $selectedPlanKey))->tier
-            ?? $tenant->planTier();
-    @endphp
     <div class="mb-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <div class="sm:col-span-2 xl:col-span-2">
             <label class="rr-label" for="company_name">Company name</label>
@@ -145,13 +150,14 @@
             <p class="mt-1 text-xs text-slate-500">Use hostname only (no http:// and no :port). Example: company.localhost</p>
         </div>
         <div class="flex items-end pb-0.5">
-            <label class="flex cursor-pointer items-center gap-2.5" for="is_domain_active">
-                <input type="checkbox" name="is_domain_active" id="is_domain_active" value="1" @checked($tenant->is_domain_active)
+            <label class="flex cursor-pointer items-center gap-2.5" for="manual_domain_disabled">
+                <input type="checkbox" name="manual_domain_disabled" id="manual_domain_disabled" value="1" @checked(! $tenant->is_domain_active && ! $isExpired)
                     class="size-4 rounded border-slate-600 bg-slate-900 text-violet-500 focus:ring-violet-500">
-                <span class="text-sm text-slate-300">Domain enabled</span>
+                <span class="text-sm text-slate-300">Disable domain manually (maintenance mode)</span>
             </label>
         </div>
     </div>
+    <p class="mb-5 -mt-1 text-xs text-slate-500">When subscription is expired, domain is automatically disabled and handled through extension requests.</p>
     <div id="featured-homepage-settings" class="mb-6 @unless($selectedTier === 'premium') hidden @endunless">
         <label class="flex cursor-pointer items-start gap-3" for="is_featured">
             <input type="checkbox" name="is_featured" id="is_featured" value="1" @checked(old('is_featured', ($selectedTier === 'premium') && ($tenant->is_featured ?? false)))

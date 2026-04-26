@@ -2,40 +2,75 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\UpdateTenantProfileRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 class TenantController extends Controller
 {
+    private const DEFAULT_TENANT_NAV_SEQUENCE = [
+        'dashboard',
+        'vehicles',
+        'maintenance',
+        'customers',
+        'reports',
+        'analytics',
+        'bookings',
+        'calendar',
+        'payments',
+        'staff',
+        'updated_module',
+        'about',
+    ];
+
+    private const TENANT_NAV_LABELS = [
+        'dashboard' => 'Dashboard',
+        'vehicles' => 'Vehicles',
+        'maintenance' => 'Maintenance',
+        'customers' => 'Customers',
+        'reports' => 'Reports',
+        'analytics' => 'Analytics',
+        'bookings' => 'Bookings',
+        'calendar' => 'Calendar',
+        'payments' => 'Payments',
+        'staff' => 'Staff',
+        'updated_module' => 'Updated module',
+        'about' => 'About',
+    ];
+
     public function profile()
     {
         $user = Auth::user();
         $tenant = $user->tenant;
+        $tenantNavLabels = self::TENANT_NAV_LABELS;
+        $tenantNavDefaultSequence = self::DEFAULT_TENANT_NAV_SEQUENCE;
 
-        return view('admin.tenant.profile', compact('tenant', 'user'));
+        return view('admin.tenant.profile', compact('tenant', 'user', 'tenantNavLabels', 'tenantNavDefaultSequence'));
     }
 
-    public function updateProfile(Request $request)
+    public function updateProfile(UpdateTenantProfileRequest $request)
     {
         $user = Auth::user();
         $tenant = $user->tenant;
 
-        $data = $request->validate([
-            'company_name' => 'required|string|max:255',
-            'owner_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'address' => 'nullable|string',
-            'theme' => 'required|in:slate,indigo,emerald,fuchsia',
-            'logo' => 'nullable|image|max:5120',
-            'public_tagline' => 'nullable|string|max:255',
-            'website_url' => 'nullable|url|max:512',
-            'public_booking_notes' => 'nullable|string|max:5000',
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
-            'new_password' => 'nullable|confirmed|min:8',
-        ]);
+        $data = $request->validated();
+
+        $requestedSequence = array_values(array_filter(
+            $data['navbar_sequence'] ?? [],
+            fn ($key) => is_string($key) && $key !== ''
+        ));
+        $navbarSequence = [];
+        foreach ($requestedSequence as $key) {
+            if (in_array($key, self::DEFAULT_TENANT_NAV_SEQUENCE, true) && ! in_array($key, $navbarSequence, true)) {
+                $navbarSequence[] = $key;
+            }
+        }
+        foreach (self::DEFAULT_TENANT_NAV_SEQUENCE as $defaultKey) {
+            if (! in_array($defaultKey, $navbarSequence, true)) {
+                $navbarSequence[] = $defaultKey;
+            }
+        }
 
         $tenant->update([
             'company_name' => $data['company_name'],
@@ -44,8 +79,8 @@ class TenantController extends Controller
             'address' => $data['address'] ?? null,
             'theme' => $data['theme'],
             'public_tagline' => $data['public_tagline'] ?? null,
-            'website_url' => $data['website_url'] ?? null,
             'public_booking_notes' => $data['public_booking_notes'] ?? null,
+            'navbar_sequence' => $navbarSequence,
         ]);
 
         if ($request->hasFile('logo')) {

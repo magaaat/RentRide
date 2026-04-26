@@ -36,13 +36,16 @@ class EnsureTenantDomainIsActive
 
         if ($tenant->status !== 'approved' || ! $tenant->is_domain_active || $expired) {
             $tenantKey = $tenant->slug ?: $user->tenant_id;
+            $message = $expired
+                ? 'Your subscription has expired. Please renew your plan to restore access.'
+                : 'Your company domain is currently in maintenance mode. Please contact Super Admin.';
 
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return redirect()->route('login', ['tenant' => $tenantKey])->withErrors([
-                'email' => 'Your company domain is currently disabled. Please contact Super Admin or renew your plan.',
+                'email' => $message,
             ]);
         }
 

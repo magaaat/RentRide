@@ -56,7 +56,7 @@
             </div>
         @else
             <h2 class="mt-8 text-lg font-semibold">Request a reservation</h2>
-            <p class="text-sm text-slate-400 mb-4">Submit dates — the rental company confirms after they receive payment (for example cash at pickup). Estimated total is the daily rate × number of calendar days.</p>
+            <p class="text-sm text-slate-400 mb-4">Submit dates — the rental company confirms after they receive payment (for example cash at pickup). Estimated total is the daily rate × rental days (end date minus start date).</p>
             <form method="POST" action="{{ route('customer.vehicles.book', [$tenant, $vehicle]) }}" class="space-y-4 max-w-md">
                 @csrf
                 <div>

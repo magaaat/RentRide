@@ -26,6 +26,9 @@ class TenantReleaseUpdater
         if ($git === '') {
             $git = 'git';
         }
+        if (($php === '' || $php === 'php') && PHP_BINARY !== '') {
+            $php = PHP_BINARY;
+        }
 
         $steps = [];
 
@@ -59,6 +62,7 @@ class TenantReleaseUpdater
     {
         $process = new Process($command, $cwd, $this->subprocessEnvironment());
         $process->setTimeout($timeout);
+        $this->ensureChildProcessesSeePhpOnPath($process);
         $process->run();
 
         if (! $process->isSuccessful()) {
@@ -165,5 +169,38 @@ class TenantReleaseUpdater
         }
 
         return $env;
+    }
+
+    /**
+     * composer.bat calls bare php; web SAPI subprocesses often lack PHP on PATH (Windows).
+     */
+    protected function ensureChildProcessesSeePhpOnPath(Process $process): void
+    {
+        $phpBinary = PHP_BINARY;
+        if ($phpBinary === '' || ! is_file($phpBinary)) {
+            return;
+        }
+
+        $phpDir = dirname($phpBinary);
+        if ($phpDir === '' || ! is_dir($phpDir)) {
+            return;
+        }
+
+        $sep = PATH_SEPARATOR;
+        $path = getenv('PATH');
+        if ($path === false || $path === '') {
+            $path = getenv('Path');
+        }
+        $path = is_string($path) ? $path : '';
+        $prefix = $phpDir.$sep;
+        if ($path !== '' && (str_starts_with($path, $phpDir.$sep) || str_starts_with($path, $phpDir.';'))) {
+            return;
+        }
+
+        $merged = $prefix.$path;
+        $process->setEnv([
+            'PATH' => $merged,
+            'Path' => $merged,
+        ]);
     }
 }

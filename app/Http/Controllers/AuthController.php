@@ -454,7 +454,7 @@ class AuthController extends Controller
                 if (! $user->tenant->is_domain_active) {
                     Auth::logout();
                     return back()->withErrors([
-                        'email' => 'Your company domain is currently disabled. Please renew your subscription or contact the Super Admin for assistance.',
+                        'email' => 'Your company domain is currently in maintenance mode. Please contact Super Admin for assistance.',
                     ]);
                 }
 
@@ -544,11 +544,11 @@ class AuthController extends Controller
         $tenant = Tenant::findOrFail($data['tenant_id']);
         $tenantKey = $tenant->slug ?: (string) $tenant->id;
 
-        // Only allow requests if the tenant is approved but currently disabled/expired.
+        // Only allow requests when subscription is expired.
         $expired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry);
-        if ($tenant->status !== 'approved' || ($tenant->is_domain_active && ! $expired)) {
+        if ($tenant->status !== 'approved' || ! $expired) {
             return redirect()->route('login', ['tenant' => $tenantKey])
-                ->withErrors(['email' => 'This tenant does not require a plan extension at the moment.']);
+                ->withErrors(['email' => 'Plan extension is only available when subscription is expired.']);
         }
 
         $alreadyPending = PlanExtensionRequest::where('tenant_id', $tenant->id)
@@ -720,17 +720,23 @@ class AuthController extends Controller
         // If domain is disabled (or expired), show the domain disabled page (pre-login)
         $expired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry);
         if (! $tenant->is_domain_active || $expired) {
-            $plans = SubscriptionPlan::query()
-                ->where('show_on_landing', true)
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->get();
+            $isMaintenanceMode = ! $tenant->is_domain_active && ! $expired;
+            $plans = collect();
+            $hasPending = false;
 
-            $hasPending = PlanExtensionRequest::where('tenant_id', $tenant->id)
-                ->where('status', 'pending')
-                ->exists();
+            if ($expired) {
+                $plans = SubscriptionPlan::query()
+                    ->where('show_on_landing', true)
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->get();
 
-            return view('auth.tenant-domain-disabled', compact('tenant', 'plans', 'hasPending'));
+                $hasPending = PlanExtensionRequest::where('tenant_id', $tenant->id)
+                    ->where('status', 'pending')
+                    ->exists();
+            }
+
+            return view('auth.tenant-domain-disabled', compact('tenant', 'plans', 'hasPending', 'expired', 'isMaintenanceMode'));
         }
 
         return view('auth.tenant-login', compact('tenant'));

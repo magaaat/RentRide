@@ -10,10 +10,18 @@
                 Tenant: {{ $tenant->company_name }}
             </div>
             <h2 class="mt-4 text-2xl font-semibold">Access unavailable</h2>
-            <p class="mt-2 text-sm text-slate-300">Subscription inactive or expired. Request an extension below.</p>
+            @if(($isMaintenanceMode ?? false) === true)
+                <p class="mt-2 text-sm text-slate-300">This tenant is currently in maintenance mode. Please contact Super Admin.</p>
+            @else
+                <p class="mt-2 text-sm text-slate-300">Subscription expired. Request an extension below.</p>
+            @endif
         </div>
 
-        @if($hasPending)
+        @if(($isMaintenanceMode ?? false) === true)
+            <div class="mt-6 rounded-xl border rr-border rr-surface-2 p-4 text-sm text-slate-200">
+                Domain is manually disabled for maintenance.
+            </div>
+        @elseif($hasPending)
             <div class="mt-6 rounded-xl border rr-border rr-surface-2 p-4 text-sm text-slate-200">
                 Extension request pending.
             </div>

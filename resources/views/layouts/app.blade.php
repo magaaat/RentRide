@@ -566,49 +566,152 @@
                 $hasUpdatedModule = \App\Support\TenantRuntimeVersion::isAtLeast($runtimeVersion, $updateModuleMinVersion);
                 $navActive = 'bg-white text-slate-900 border border-slate-200 shadow-sm';
                 $navIdle = 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-transparent';
+
+                $tenantNavItems = [];
+                $tenantNavItems[] = [
+                    'key' => 'dashboard',
+                    'href' => route('admin.dashboard'),
+                    'label' => 'Dashboard',
+                    'active' => request()->routeIs('admin.dashboard'),
+                    'dot' => $tenantDashboardPending > 0,
+                    'count' => null,
+                ];
+                if ($canVehicles) {
+                    $tenantNavItems[] = [
+                        'key' => 'vehicles',
+                        'href' => route('vehicles.index'),
+                        'label' => 'Vehicles',
+                        'active' => request()->routeIs('vehicles.*') && ! request()->routeIs('vehicles.maintenance'),
+                        'dot' => false,
+                        'count' => null,
+                    ];
+                }
+                if ($hasMaint && $canMaint) {
+                    $tenantNavItems[] = [
+                        'key' => 'maintenance',
+                        'href' => route('vehicles.maintenance'),
+                        'label' => 'Maintenance',
+                        'active' => request()->routeIs('vehicles.maintenance'),
+                        'dot' => false,
+                        'count' => null,
+                    ];
+                }
+                if ($canCustomers) {
+                    $tenantNavItems[] = [
+                        'key' => 'customers',
+                        'href' => route('customers.index'),
+                        'label' => 'Customers',
+                        'active' => request()->routeIs('customers.*'),
+                        'dot' => false,
+                        'count' => null,
+                    ];
+                }
+                if ($hasSalesDashboard && $canReports) {
+                    $tenantNavItems[] = [
+                        'key' => 'reports',
+                        'href' => route('tenant.reports'),
+                        'label' => 'Reports',
+                        'active' => request()->routeIs('tenant.reports'),
+                        'dot' => false,
+                        'count' => null,
+                    ];
+                }
+                if ($hasAnalytics && $canReports) {
+                    $tenantNavItems[] = [
+                        'key' => 'analytics',
+                        'href' => route('tenant.analytics'),
+                        'label' => 'Analytics',
+                        'active' => request()->routeIs('tenant.analytics'),
+                        'dot' => false,
+                        'count' => null,
+                    ];
+                }
+                if ($canBookings) {
+                    $tenantNavItems[] = [
+                        'key' => 'bookings',
+                        'href' => route('bookings.index'),
+                        'label' => 'Bookings',
+                        'active' => request()->routeIs('bookings.index', 'bookings.create', 'bookings.store', 'bookings.updateStatus'),
+                        'dot' => false,
+                        'count' => $tenantPendingBookingsCount > 0 ? $tenantPendingBookingsCount : null,
+                    ];
+                }
+                if ($hasCal && $canBookings) {
+                    $tenantNavItems[] = [
+                        'key' => 'calendar',
+                        'href' => route('bookings.calendar'),
+                        'label' => 'Calendar',
+                        'active' => request()->routeIs('bookings.calendar'),
+                        'dot' => false,
+                        'count' => null,
+                    ];
+                }
+                if ($hasPay && $canPayments) {
+                    $tenantNavItems[] = [
+                        'key' => 'payments',
+                        'href' => route('payments.index'),
+                        'label' => 'Payments',
+                        'active' => request()->routeIs('payments.*'),
+                        'dot' => false,
+                        'count' => null,
+                    ];
+                }
+                if ($canStaff) {
+                    $tenantNavItems[] = [
+                        'key' => 'staff',
+                        'href' => route('admin.staff.index'),
+                        'label' => 'Staff',
+                        'active' => request()->routeIs('admin.staff.*'),
+                        'dot' => false,
+                        'count' => null,
+                    ];
+                }
+                if ($hasUpdatedModule) {
+                    $tenantNavItems[] = [
+                        'key' => 'updated_module',
+                        'href' => route('admin.updated-module'),
+                        'label' => 'Updated module',
+                        'active' => request()->routeIs('admin.updated-module'),
+                        'dot' => false,
+                        'count' => null,
+                    ];
+                }
+                $tenantNavItems[] = [
+                    'key' => 'about',
+                    'href' => route('admin.about'),
+                    'label' => 'About',
+                    'active' => request()->routeIs('admin.about', 'admin.support'),
+                    'dot' => false,
+                    'count' => null,
+                ];
+
+                $tenantSequence = is_array($tn?->navbar_sequence) ? $tn->navbar_sequence : [];
+                $tenantNavByKey = [];
+                foreach ($tenantNavItems as $item) {
+                    $tenantNavByKey[$item['key']] = $item;
+                }
+                $orderedTenantNavItems = [];
+                foreach ($tenantSequence as $sequenceKey) {
+                    if (isset($tenantNavByKey[$sequenceKey])) {
+                        $orderedTenantNavItems[] = $tenantNavByKey[$sequenceKey];
+                        unset($tenantNavByKey[$sequenceKey]);
+                    }
+                }
+                foreach ($tenantNavByKey as $remainingNavItem) {
+                    $orderedTenantNavItems[] = $remainingNavItem;
+                }
             @endphp
-            <a href="{{ route('admin.dashboard') }}" class="rr-nav-pill relative inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.dashboard') ? $navActive : $navIdle }}">
-                Dashboard
-                @if($tenantDashboardPending > 0)
-                    <span class="rr-nav-badge absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" title="Needs attention"></span>
-                @endif
-            </a>
-            @if($canVehicles)
-                <a href="{{ route('vehicles.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('vehicles.*') && !request()->routeIs('vehicles.maintenance') ? $navActive : $navIdle }}">Vehicles</a>
-            @endif
-            @if($hasMaint && $canMaint)
-                <a href="{{ route('vehicles.maintenance') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('vehicles.maintenance') ? $navActive : $navIdle }}">Maintenance</a>
-            @endif
-            @if($canCustomers)
-                <a href="{{ route('customers.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('customers.*') ? $navActive : $navIdle }}">Customers</a>
-            @endif
-            @if($hasSalesDashboard && $canReports)
-                <a href="{{ route('tenant.reports') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('tenant.reports') ? $navActive : $navIdle }}">Reports</a>
-            @endif
-            @if($hasAnalytics && $canReports)
-                <a href="{{ route('tenant.analytics') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('tenant.analytics') ? $navActive : $navIdle }}">Analytics</a>
-            @endif
-            @if($canBookings)
-                <a href="{{ route('bookings.index') }}" class="rr-nav-pill inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('bookings.index', 'bookings.create', 'bookings.store', 'bookings.updateStatus') ? $navActive : $navIdle }}">
-                    <span>Bookings</span>
-                    @if($tenantPendingBookingsCount > 0)
-                        <span class="rr-nav-badge ml-1 inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">{{ $tenantPendingBookingsCount > 9 ? '9+' : $tenantPendingBookingsCount }}</span>
+            @foreach($orderedTenantNavItems as $item)
+                <a href="{{ $item['href'] }}" class="rr-nav-pill {{ $item['dot'] ? 'relative inline-flex items-center' : '' }} {{ $item['count'] !== null ? 'inline-flex items-center gap-1.5' : '' }} shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ $item['active'] ? $navActive : $navIdle }}">
+                    <span>{{ $item['label'] }}</span>
+                    @if($item['count'] !== null)
+                        <span class="rr-nav-badge ml-1 inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">{{ $item['count'] > 9 ? '9+' : $item['count'] }}</span>
+                    @endif
+                    @if($item['dot'])
+                        <span class="rr-nav-badge absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white" title="Needs attention"></span>
                     @endif
                 </a>
-            @endif
-            @if($hasCal && $canBookings)
-                <a href="{{ route('bookings.calendar') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('bookings.calendar') ? $navActive : $navIdle }}">Calendar</a>
-            @endif
-            @if($hasPay && $canPayments)
-                <a href="{{ route('payments.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('payments.*') ? $navActive : $navIdle }}">Payments</a>
-            @endif
-            @if($canStaff)
-                <a href="{{ route('admin.staff.index') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.staff.*') ? $navActive : $navIdle }}">Staff</a>
-            @endif
-            @if($hasUpdatedModule)
-                <a href="{{ route('admin.updated-module') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.updated-module') ? $navActive : $navIdle }}">Updated module</a>
-            @endif
-            <a href="{{ route('admin.about') }}" class="shrink-0 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.about', 'admin.support') ? $navActive : $navIdle }}">About</a>
+            @endforeach
         @else
             @php
                 $navActive = 'bg-white text-slate-900 border border-slate-200 shadow-sm';

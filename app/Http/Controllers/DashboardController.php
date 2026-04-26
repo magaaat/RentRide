@@ -19,7 +19,10 @@ class DashboardController extends Controller
 
         $totalTenants = Tenant::count();
         $activeSubscriptions = Tenant::whereDate('subscription_expiry', '>=', now())->count();
-        $platformRevenue = Payment::where('payment_status', 'paid')->sum('amount');
+        $platformRevenue = Tenant::query()
+            ->where('status', 'approved')
+            ->join('subscription_plans', 'subscription_plans.key', '=', 'tenants.subscription_plan')
+            ->sum('subscription_plans.base_price');
 
         return view('superadmin.dashboard', compact(
             'totalTenants',

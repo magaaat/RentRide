@@ -56,15 +56,20 @@
                         @endif
                     </td>
                     <td class="px-4 py-3">
+                        @php($isExpired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry))
                         @if($tenant->status !== 'approved' || ! $tenant->domain)
                             <span class="text-slate-400">-</span>
                         @elseif($tenant->is_domain_active)
                             <span class="rr-chip-accent inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">
                                 Active
                             </span>
+                        @elseif($isExpired)
+                            <span class="inline-flex items-center rounded-full bg-amber-400/10 px-2.5 py-0.5 text-xs font-semibold text-amber-300">
+                                Expired
+                            </span>
                         @else
                             <span class="inline-flex items-center rounded-full bg-slate-500/20 px-2.5 py-0.5 text-xs font-semibold text-slate-300">
-                                Disabled
+                                Maintenance
                             </span>
                         @endif
                     </td>

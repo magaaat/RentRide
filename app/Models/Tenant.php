@@ -25,6 +25,7 @@ class Tenant extends Model
         'public_tagline',
         'website_url',
         'public_booking_notes',
+        'navbar_sequence',
         'staff_role_permissions',
         'subscription_plan',
         'subscription_expiry',
@@ -38,6 +39,7 @@ class Tenant extends Model
         'is_featured' => 'boolean',
         'subscription_expiry' => 'date',
         'staff_role_permissions' => 'array',
+        'navbar_sequence' => 'array',
         'app_version_applied_at' => 'datetime',
     ];
 

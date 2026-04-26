@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateSuperAdminTenantRequest;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
@@ -19,6 +20,7 @@ use Stancl\Tenancy\Database\Models\Tenant as TenancyTenant;
 use Stancl\Tenancy\Database\Models\Domain as TenancyDomain;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Carbon;
 
 class SuperAdminController extends Controller
 {
@@ -28,7 +30,10 @@ class SuperAdminController extends Controller
 
         $totalTenants = Tenant::count();
         $activeSubscriptions = Subscription::where('status', 'active')->count();
-        $platformRevenue = Subscription::where('status', 'active')->sum('price');
+        $platformRevenue = Tenant::query()
+            ->where('status', 'approved')
+            ->join('subscription_plans', 'subscription_plans.key', '=', 'tenants.subscription_plan')
+            ->sum('subscription_plans.base_price');
 
         return view('superadmin.dashboard', compact(
             'totalTenants',
@@ -169,22 +174,17 @@ class SuperAdminController extends Controller
         return view('superadmin.tenants.edit', compact('tenant'));
     }
 
-    public function updateTenant(Request $request, Tenant $tenant)
+    public function updateTenant(UpdateSuperAdminTenantRequest $request, Tenant $tenant)
     {
         $wasPending = $tenant->status === 'pending';
         $previousDomain = $tenant->domain;
 
-        $data = $request->validate([
-            'company_name' => 'required|string|max:255',
-            'subscription_plan' => ['required', Rule::exists('subscription_plans', 'key')],
-            'subscription_expiry' => 'nullable|date',
-            'domain' => 'nullable|string|max:255|unique:tenants,domain,' . $tenant->id,
-            'is_domain_active' => 'nullable|boolean',
-            'is_featured' => 'nullable|boolean',
-            'status' => 'required|in:pending,approved',
-        ]);
+        $data = $request->validated();
 
-        $data['is_domain_active'] = $request->boolean('is_domain_active');
+        $manuallyDisabled = $request->boolean('manual_domain_disabled');
+        $expiryValue = $data['subscription_expiry'] ?? $tenant->subscription_expiry;
+        $expiredByDate = $expiryValue ? now()->greaterThan(Carbon::parse($expiryValue)) : false;
+        $data['is_domain_active'] = ! $manuallyDisabled && ! $expiredByDate;
         $planRow = SubscriptionPlan::where('key', $data['subscription_plan'])->first();
         $data['is_featured'] = ($planRow && ($planRow->feature_tier ?? $planRow->tier) === 'premium' && $request->boolean('is_featured'));
         $data['domain'] = $this->normalizeDomainInput($data['domain'] ?? null);

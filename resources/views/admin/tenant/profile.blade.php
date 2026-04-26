@@ -4,6 +4,10 @@
 
 @section('content')
 @php($rr = config('rentride'))
+@php($navSequence = old('navbar_sequence', $tenant->navbar_sequence ?? $tenantNavDefaultSequence))
+@php($navSequence = array_values(array_filter($navSequence, fn ($item) => is_string($item) && array_key_exists($item, $tenantNavLabels))))
+@php($missingNavItems = array_values(array_diff($tenantNavDefaultSequence, $navSequence)))
+@php($navSequence = array_merge($navSequence, $missingNavItems))
 <div class="mb-4 sm:mb-6">
     <h3 class="text-xl font-semibold">My Profile</h3>
     <p class="text-sm text-slate-300">Update your account, company details, theme, and what customers see on your RentRide listing.</p>
@@ -115,17 +119,37 @@
                                class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">
                     </div>
                     <div class="mt-4">
-                        <label class="block text-sm font-medium mb-1">Company website</label>
-                        <input type="url" name="website_url" value="{{ old('website_url', $tenant->website_url) }}"
-                               placeholder="https://example.com"
-                               class="w-full rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">
-                    </div>
-                    <div class="mt-4">
                         <label class="block text-sm font-medium mb-1">Booking & pickup notes</label>
                         <textarea name="public_booking_notes" rows="4" maxlength="5000"
                                   placeholder="Hours, payment at pickup, ID requirements…"
                                   class="w-full min-h-[5rem] rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500">{{ old('public_booking_notes', $tenant->public_booking_notes) }}</textarea>
                         <p class="mt-1 text-xs text-slate-400">Plain text.</p>
+                    </div>
+
+                    <div class="mt-4 border-t border-slate-700/80 pt-4">
+                        <div class="flex items-center justify-between gap-2">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Tenant navbar sequence</label>
+                                <p class="text-xs text-slate-400">Click the button, then drag items to reorder your top navigation. Hidden modules still follow permissions and plan features.</p>
+                            </div>
+                            <button type="button" id="rr-enable-nav-reorder"
+                                    class="inline-flex items-center rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-800/80">
+                                Enable reordering
+                            </button>
+                        </div>
+
+                        <div id="rr-nav-sequence-list" class="mt-3 space-y-2" data-enabled="false">
+                            @foreach($navSequence as $index => $key)
+                                <div class="rr-nav-sequence-item flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2"
+                                     data-nav-key="{{ $key }}"
+                                     draggable="false">
+                                    <span class="rr-nav-sequence-index inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-700 bg-slate-900/70 text-xs font-semibold">{{ $index + 1 }}</span>
+                                    <span class="flex-1 text-sm text-slate-100">{{ $tenantNavLabels[$key] ?? $key }}</span>
+                                    <span class="rr-nav-sequence-handle text-xs text-slate-500 select-none">Drag</span>
+                                    <input type="hidden" name="navbar_sequence[]" value="{{ $key }}">
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
             </div>
@@ -152,4 +176,75 @@
         </a>
     </div>
 </form>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const list = document.getElementById('rr-nav-sequence-list');
+        const toggleButton = document.getElementById('rr-enable-nav-reorder');
+        if (!list || !toggleButton) return;
+
+        let isEnabled = false;
+        let draggedItem = null;
+
+        const updateIndices = () => {
+            Array.from(list.querySelectorAll('.rr-nav-sequence-item')).forEach((item, idx) => {
+                const indexEl = item.querySelector('.rr-nav-sequence-index');
+                if (indexEl) indexEl.textContent = String(idx + 1);
+            });
+        };
+
+        const setEnabledState = (enabled) => {
+            isEnabled = enabled;
+            list.dataset.enabled = enabled ? 'true' : 'false';
+            toggleButton.textContent = enabled ? 'Done reordering' : 'Enable reordering';
+            toggleButton.classList.toggle('rr-btn-primary', enabled);
+            toggleButton.classList.toggle('text-slate-200', !enabled);
+            toggleButton.classList.toggle('border-slate-600', !enabled);
+
+            list.querySelectorAll('.rr-nav-sequence-item').forEach((item) => {
+                item.draggable = enabled;
+                item.classList.toggle('cursor-grab', enabled);
+                item.classList.toggle('opacity-85', !enabled);
+            });
+        };
+
+        const attachDnD = (item) => {
+            item.addEventListener('dragstart', () => {
+                if (!isEnabled) return;
+                draggedItem = item;
+                item.classList.add('opacity-60');
+            });
+
+            item.addEventListener('dragend', () => {
+                item.classList.remove('opacity-60');
+                draggedItem = null;
+                updateIndices();
+            });
+
+            item.addEventListener('dragover', (e) => {
+                if (!isEnabled || !draggedItem || draggedItem === item) return;
+                e.preventDefault();
+            });
+
+            item.addEventListener('drop', (e) => {
+                if (!isEnabled || !draggedItem || draggedItem === item) return;
+                e.preventDefault();
+                const rect = item.getBoundingClientRect();
+                const shouldInsertAfter = (e.clientY - rect.top) > rect.height / 2;
+                if (shouldInsertAfter) {
+                    item.after(draggedItem);
+                } else {
+                    item.before(draggedItem);
+                }
+                updateIndices();
+            });
+        };
+
+        list.querySelectorAll('.rr-nav-sequence-item').forEach(attachDnD);
+        toggleButton.addEventListener('click', () => setEnabledState(!isEnabled));
+        setEnabledState(false);
+    });
+</script>
+@endpush
 @endsection
