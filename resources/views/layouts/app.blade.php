@@ -605,6 +605,14 @@
                         'dot' => false,
                         'count' => null,
                     ];
+                    $tenantNavItems[] = [
+                        'key' => 'students',
+                        'href' => route('students.index'),
+                        'label' => 'Students',
+                        'active' => request()->routeIs('students.*'),
+                        'dot' => false,
+                        'count' => null,
+                    ];
                 }
                 if ($hasSalesDashboard && $canReports) {
                     $tenantNavItems[] = [

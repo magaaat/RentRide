@@ -10,6 +10,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SuperAdminPlanController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SuperAdminExtensionController;
+use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantReportController;
 use App\Http\Controllers\BookingCalendarController;
@@ -135,6 +136,9 @@ Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
             ->middleware('tenant.permission:vehicles.manage');
         Route::resource('customers', CustomerController::class)
             ->except(['edit', 'update'])
+            ->middleware('tenant.permission:customers.manage');
+        Route::resource('students', StudentController::class)
+            ->except(['show', 'create', 'edit'])
             ->middleware('tenant.permission:customers.manage');
 
         Route::get('bookings/calendar', [BookingCalendarController::class, 'index'])
