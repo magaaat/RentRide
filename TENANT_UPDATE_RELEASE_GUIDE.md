@@ -229,12 +229,12 @@ Create PR on GitHub, review, and merge to `main`.
 
 ---
 
-## 14) Update Version File
+## 14) Prepare `v1.5.0` Release
 
-This repo has a `VERSION` file. Update it, for example:
+This repo has a `VERSION` file. Update it to:
 
 ```text
-v1.4.0
+v1.5.0
 ```
 
 Then commit:
@@ -243,33 +243,51 @@ Then commit:
 git checkout main
 git pull
 git add VERSION
-git commit -m "Bump version to v1.4.0"
+git commit -m "Bump version to v1.5.0"
 git push
 ```
 
 ---
 
-## 15) Manual Tag Creation in GitHub UI (No CLI Tag)
+## 15) Create Tag + Publish Release
+
+You can do this in either GitHub UI or CLI.
+
+### Option A: GitHub UI (manual, easiest for demo)
 
 After your `main` branch is updated:
 
 1. Open your repository on GitHub
 2. Click **Releases** (right panel or repository tab area)
 3. Click **Draft a new release**
-4. In **Choose a tag**, type your new tag (example: `v1.4.0`)
-5. Click **Create new tag: v1.4.0 on publish target: main**
+4. In **Choose a tag**, type your new tag: `v1.5.0`
+5. Click **Create new tag: v1.5.0 on publish target: main**
 6. Confirm target branch/commit is correct (`main`)
-7. Set release title (example: `v1.4.0`)
+7. Set release title: `v1.5.0`
 8. Add release notes, for example:
-   - Added tenant Students module
-   - Added tenant migration for students table
-   - Added tenant seeder for initial students data
+   - Added tenant update flow improvements
+   - Added separate extension request page
+   - Refactored validations into Form Request classes
+   - Added support for custom staff roles
 9. Click **Publish release**
 
 This creates both:
 
-- the Git tag (`v1.4.0`)
+- the Git tag (`v1.5.0`)
 - the GitHub Release entry
+
+---
+
+### Option B: Git CLI (if you prefer terminal)
+
+```powershell
+git checkout main
+git pull
+git tag -a v1.5.0 -m "Release v1.5.0"
+git push origin v1.5.0
+```
+
+Then open GitHub > Releases > **Draft a new release** > choose existing tag `v1.5.0` > add notes > publish.
 
 ---
 
@@ -280,7 +298,7 @@ This creates both:
 3. Run `tenants:migrate` and `tenants:seed`
 4. Show Students list in UI
 5. Show merged PR
-6. Show GitHub Release page with manual tag `v1.4.0`
+6. Show GitHub Release page with tag `v1.5.0`
 
 ---
 
@@ -293,7 +311,31 @@ This creates both:
 
 ---
 
-## 18) Optional: Download/Share This File
+## 18) FAQ: Does "Download Update" Also Apply Migrations to Tenant DB?
+
+Short answer: **it runs central app migrations only**.
+
+Current updater flow in this project runs:
+
+- `php artisan migrate --force`
+
+It does **not** run tenant migration command:
+
+- `php artisan tenants:migrate`
+
+So if your release includes new tenant-table schema changes (in `database/migrations/tenant`), you still need to run tenant migrations separately (for all tenants or specific tenants).
+
+Recommended after update:
+
+```powershell
+php artisan tenants:migrate
+```
+
+If you want fully automatic tenant schema updates during "Download Update", add `php artisan tenants:migrate --force` to the updater sequence.
+
+---
+
+## 19) Optional: Download/Share This File
 
 Use this file directly:
 

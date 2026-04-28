@@ -114,7 +114,7 @@ class SupportController extends Controller
         gc_collect_cycles();
 
         try {
-            $result = $updater->applyTag($targetVersion);
+            $result = $updater->applyTag($targetVersion, (int) $tenant->id);
         } catch (Throwable $e) {
             report($e);
 

@@ -7,6 +7,7 @@ use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\StudentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,4 +39,11 @@ Route::middleware([
     // Tenant admin dashboard and related routes use the same controllers,
     // but will automatically use the tenant's database because of the middleware.
     Route::get('/admin/dashboard', [DashboardController::class, 'admin'])->name('tenant.admin.dashboard');
+
+    Route::middleware(['auth', 'tenant.user'])->prefix('admin')->name('tenant.students.')->group(function () {
+        Route::get('/students', [StudentController::class, 'index'])->name('index');
+        Route::post('/students', [StudentController::class, 'store'])->name('store');
+        Route::put('/students/{student}', [StudentController::class, 'update'])->name('update');
+        Route::delete('/students/{student}', [StudentController::class, 'destroy'])->name('destroy');
+    });
 });

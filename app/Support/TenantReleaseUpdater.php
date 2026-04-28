@@ -7,7 +7,7 @@ use Symfony\Component\Process\Process;
 
 class TenantReleaseUpdater
 {
-    public function applyTag(string $tag): array
+    public function applyTag(string $tag, ?int $tenantId = null): array
     {
         if (! (bool) config('rentride.tenant_release_updater_enabled', false)) {
             throw new RuntimeException('Tenant release updater is disabled. Set TENANT_RELEASE_UPDATER_ENABLED=true.');
@@ -52,12 +52,34 @@ class TenantReleaseUpdater
         $steps[] = $this->run([$git, 'checkout', '--force', $tag], $basePath, $timeout, 'Checkout release tag', null);
         $steps[] = $this->run([$composer, 'install', '--no-interaction', '--prefer-dist', '--optimize-autoloader'], $basePath, $timeout, 'Install PHP dependencies', null);
         $steps[] = $this->run([$php, 'artisan', 'migrate', '--force'], $basePath, $timeout, 'Run database migrations', null);
+        $steps[] = $this->runTenantMigrations($php, $basePath, $timeout, $tenantId);
         $steps[] = $this->run([$php, 'artisan', 'optimize:clear'], $basePath, $timeout, 'Clear application caches', null);
 
         return [
             'tag' => $tag,
             'steps' => $steps,
         ];
+    }
+
+    protected function runTenantMigrations(string $php, string $basePath, int $timeout, ?int $tenantId): array
+    {
+        if ($tenantId !== null && $tenantId > 0) {
+            return $this->run(
+                [$php, 'artisan', 'tenants:migrate', '--tenants=' . $tenantId, '--force'],
+                $basePath,
+                $timeout,
+                'Run tenant migrations',
+                'php artisan tenants:migrate --tenants=' . $tenantId . ' --force'
+            );
+        }
+
+        return $this->run(
+            [$php, 'artisan', 'tenants:migrate', '--force'],
+            $basePath,
+            $timeout,
+            'Run tenant migrations',
+            'php artisan tenants:migrate --force'
+        );
     }
 
     protected function run(array $command, string $cwd, int $timeout, string $label, ?string $displayCommand = null): array
