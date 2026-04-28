@@ -43,6 +43,21 @@
     <p class="mb-1 text-sm"><strong>Phone:</strong> {{ $tenant->phone }}</p>
     <p class="mb-1 text-sm"><strong>Address:</strong> {{ $tenant->address }}</p>
     <p class="mb-1 text-sm"><strong>Plan:</strong> {{ $planDisplayName ?? ucfirst($tenant->subscription_plan) }} <span class="text-xs text-slate-500">({{ $tenant->subscription_plan }})</span></p>
+    <p class="mb-1 text-sm"><strong>Signup Payment Method:</strong> {{ strtoupper(str_replace('_', ' ', (string) $tenant->signup_payment_method)) ?: '-' }}</p>
+    <p class="mb-1 text-sm"><strong>Signup Payment Reference:</strong> {{ $tenant->signup_payment_reference ?: '-' }}</p>
+    <p class="mb-1 text-sm">
+        <strong>Signup Payment Proof:</strong>
+        @if($tenant->signup_payment_proof_path)
+            <a href="{{ asset('storage/' . $tenant->signup_payment_proof_path) }}" target="_blank" rel="noopener noreferrer" class="rr-link-accent underline">
+                View proof
+            </a>
+        @else
+            -
+        @endif
+    </p>
+    @if(!empty($tenant->signup_payment_notes))
+        <p class="mb-1 text-sm"><strong>Signup Payment Notes:</strong> {{ $tenant->signup_payment_notes }}</p>
+    @endif
     <p class="mb-1 text-sm"><strong>Subscription Expiry:</strong>
         {{ $tenant->subscription_expiry ? $tenant->subscription_expiry->format('Y-m-d') : '-' }}
     </p>
@@ -95,6 +110,21 @@
             <div class="mt-1 text-xs text-amber-100/80">
                 Requested plan: <strong>{{ ucfirst($pendingExtension->requested_plan) }}</strong>
                 <span class="text-amber-100/60">({{ $pendingExtension->created_at->format('Y-m-d H:i') }})</span>
+            </div>
+            <div class="mt-2 text-xs text-amber-100/80 space-y-1">
+                <div>Method: <strong>{{ strtoupper(str_replace('_', ' ', (string) $pendingExtension->payment_method)) ?: '-' }}</strong></div>
+                <div>Reference: <strong>{{ $pendingExtension->payment_reference ?: '-' }}</strong></div>
+                @if($pendingExtension->payment_proof_path)
+                    <div>
+                        Proof:
+                        <a href="{{ asset('storage/' . $pendingExtension->payment_proof_path) }}" target="_blank" rel="noopener noreferrer" class="underline">
+                            View uploaded proof
+                        </a>
+                    </div>
+                @endif
+                @if(!empty($pendingExtension->payment_notes))
+                    <div>Notes: {{ $pendingExtension->payment_notes }}</div>
+                @endif
             </div>
             <div class="mt-2 flex items-center gap-2">
                 <form method="POST" action="{{ route('superadmin.extensions.approve', $pendingExtension) }}" class="approve-form inline-block">

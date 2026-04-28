@@ -26,10 +26,11 @@
             </thead>
             <tbody class="divide-y divide-slate-200">
                 @forelse($staff as $s)
+                    @php($staffRoleKey = $s->staff_role ?: $s->role)
                     <tr>
                         <td class="px-4 py-3">{{ $s->name }}</td>
                         <td class="px-4 py-3">{{ $s->email }}</td>
-                        <td class="px-4 py-3">{{ $roleLabels[$s->role] ?? ucfirst(str_replace('_', ' ', $s->role)) }}</td>
+                        <td class="px-4 py-3">{{ $roleLabels[$staffRoleKey] ?? ucfirst(str_replace('_', ' ', $staffRoleKey)) }}</td>
                         <td class="px-4 py-3">
                             @if($s->is_active)
                                 <span class="rr-chip-accent inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold">Active</span>

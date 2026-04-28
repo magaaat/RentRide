@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreVehicleRequest;
+use App\Http\Requests\UpdateVehicleRequest;
 use App\Models\Vehicle;
 use App\Support\PlanLimits;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class VehicleController extends TenantControllerBase
@@ -32,7 +33,7 @@ class VehicleController extends TenantControllerBase
         return view('vehicles.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreVehicleRequest $request)
     {
         $tenantId = $this->tenantId();
         $tenant = Auth::user()->tenant;
@@ -44,22 +45,7 @@ class VehicleController extends TenantControllerBase
             ]);
         }
 
-        $data = $request->validate([
-            'vehicle_name' => 'required|string|max:255',
-            'vehicle_type' => 'required|string|max:255',
-            'brand' => 'required|string|max:255',
-            'plate_number' => 'required|string|max:255|unique:vehicles,plate_number',
-            'price_per_day' => 'required|numeric|min:0',
-            'status' => 'required|in:available,rented,maintenance,inactive',
-            'description' => 'nullable|string',
-            'maintenance_issue' => 'nullable|required_if:status,maintenance|string|max:2000',
-            'maintenance_severity' => 'nullable|required_if:status,maintenance|in:low,medium,high,critical',
-            'maintenance_reported_at' => 'nullable|required_if:status,maintenance|date',
-            'maintenance_target_fix_at' => 'nullable|date|after_or_equal:maintenance_reported_at',
-            'maintenance_fixed_at' => 'nullable|date|after_or_equal:maintenance_reported_at',
-            'maintenance_cost_estimate' => 'nullable|numeric|min:0',
-            'image' => 'nullable|image|max:2048',
-        ]);
+        $data = $request->validated();
 
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('vehicles', 'public');
@@ -79,26 +65,11 @@ class VehicleController extends TenantControllerBase
         return view('vehicles.edit', compact('vehicle'));
     }
 
-    public function update(Request $request, Vehicle $vehicle)
+    public function update(UpdateVehicleRequest $request, Vehicle $vehicle)
     {
         $this->authorizeTenantAccess($vehicle);
 
-        $data = $request->validate([
-            'vehicle_name' => 'required|string|max:255',
-            'vehicle_type' => 'required|string|max:255',
-            'brand' => 'required|string|max:255',
-            'plate_number' => 'required|string|max:255|unique:vehicles,plate_number,' . $vehicle->id,
-            'price_per_day' => 'required|numeric|min:0',
-            'status' => 'required|in:available,rented,maintenance,inactive',
-            'description' => 'nullable|string',
-            'maintenance_issue' => 'nullable|required_if:status,maintenance|string|max:2000',
-            'maintenance_severity' => 'nullable|required_if:status,maintenance|in:low,medium,high,critical',
-            'maintenance_reported_at' => 'nullable|required_if:status,maintenance|date',
-            'maintenance_target_fix_at' => 'nullable|date|after_or_equal:maintenance_reported_at',
-            'maintenance_fixed_at' => 'nullable|date|after_or_equal:maintenance_reported_at',
-            'maintenance_cost_estimate' => 'nullable|numeric|min:0',
-            'image' => 'nullable|image|max:2048',
-        ]);
+        $data = $request->validated();
 
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('vehicles', 'public');

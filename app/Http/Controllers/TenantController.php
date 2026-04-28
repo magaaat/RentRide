@@ -55,7 +55,6 @@ class TenantController extends Controller
         $tenant = $user->tenant;
 
         $data = $request->validated();
-
         $requestedSequence = array_values(array_filter(
             $data['navbar_sequence'] ?? [],
             fn ($key) => is_string($key) && $key !== ''
@@ -79,6 +78,7 @@ class TenantController extends Controller
             'address' => $data['address'] ?? null,
             'theme' => $data['theme'],
             'public_tagline' => $data['public_tagline'] ?? null,
+            'website_url' => $data['website_url'] ?? null,
             'public_booking_notes' => $data['public_booking_notes'] ?? null,
             'navbar_sequence' => $navbarSequence,
         ]);

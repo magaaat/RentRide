@@ -39,6 +39,7 @@ class UpdateTenantProfileRequest extends FormRequest
             'theme' => ['required', Rule::in(['slate', 'indigo', 'emerald', 'fuchsia'])],
             'logo' => ['nullable', 'image', 'max:5120'],
             'public_tagline' => ['nullable', 'string', 'max:255'],
+            'website_url' => ['nullable', 'url', 'max:512'],
             'public_booking_notes' => ['nullable', 'string', 'max:5000'],
             'navbar_sequence' => ['nullable', 'array'],
             'navbar_sequence.*' => ['nullable', 'string', Rule::in(self::NAV_SEQUENCE_KEYS)],

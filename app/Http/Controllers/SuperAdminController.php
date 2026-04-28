@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UpdateSuperAdminTenantRequest;
-use App\Models\Subscription;
+use App\Http\Requests\StoreTenantBySuperAdminRequest;
+use App\Http\Requests\UpdateSuperAdminProfileRequest;
+use App\Http\Requests\UpdateTenantBySuperAdminRequest;
 use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
 use App\Models\User;
@@ -11,7 +12,6 @@ use App\Mail\TenantApprovedMail;
 use App\Mail\TenantDomainUpdatedMail;
 use App\Models\PlanExtensionRequest;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -19,7 +19,6 @@ use App\Support\TenantDatabaseName;
 use Stancl\Tenancy\Database\Models\Tenant as TenancyTenant;
 use Stancl\Tenancy\Database\Models\Domain as TenancyDomain;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Carbon;
 
 class SuperAdminController extends Controller
@@ -29,11 +28,28 @@ class SuperAdminController extends Controller
         abort_unless(Auth::user()?->isSuperAdmin(), 403);
 
         $totalTenants = Tenant::count();
-        $activeSubscriptions = Subscription::where('status', 'active')->count();
-        $platformRevenue = Tenant::query()
-            ->where('status', 'approved')
-            ->join('subscription_plans', 'subscription_plans.key', '=', 'tenants.subscription_plan')
-            ->sum('subscription_plans.base_price');
+        $activeTenantQuery = Tenant::query()->where('status', 'approved');
+
+        $activeSubscriptions = (clone $activeTenantQuery)->count();
+
+        $activePlanKeys = (clone $activeTenantQuery)
+            ->pluck('subscription_plan')
+            ->filter()
+            ->values();
+
+        $planPrices = SubscriptionPlan::query()
+            ->whereIn('key', $activePlanKeys)
+            ->get()
+            ->keyBy('key');
+
+        $platformRevenue = $activePlanKeys->sum(function (string $planKey) use ($planPrices): float {
+            $plan = $planPrices->get($planKey);
+            if (! $plan) {
+                return 0.0;
+            }
+
+            return (float) $plan->discountedPrice();
+        });
 
         return view('superadmin.dashboard', compact(
             'totalTenants',
@@ -69,21 +85,14 @@ class SuperAdminController extends Controller
         return view('superadmin.tenants.create', compact('plans'));
     }
 
-    public function storeTenant(Request $request)
+    public function storeTenant(StoreTenantBySuperAdminRequest $request)
     {
         abort_unless(Auth::user()?->isSuperAdmin(), 403);
 
-        $data = $request->validate([
-            'company_name' => 'required|string|max:255',
-            'owner_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:tenants,email|unique:users,email',
-            'phone' => 'required|string|max:20',
-            'address' => 'nullable|string',
-            'subscription_plan' => ['required', Rule::exists('subscription_plans', 'key')],
-            'domain' => 'nullable|string|max:255|unique:tenants,domain',
-        ]);
+        $data = $request->validated();
 
         $data['domain'] = $this->normalizeDomainInput($data['domain'] ?? null);
+        $paymentProofPath = $request->file('payment_proof')->store('tenant-payments/signup', 'public');
 
         $planCheck = SubscriptionPlan::where('key', $data['subscription_plan'])->first();
         if (! $planCheck || ! $planCheck->is_active) {
@@ -102,6 +111,10 @@ class SuperAdminController extends Controller
             'phone' => $data['phone'],
             'address' => $data['address'] ?? null,
             'subscription_plan' => $data['subscription_plan'],
+            'signup_payment_method' => $data['payment_method'],
+            'signup_payment_reference' => $data['payment_reference'],
+            'signup_payment_proof_path' => $paymentProofPath,
+            'signup_payment_notes' => $data['payment_notes'] ?? null,
             'status' => 'approved',
             'subscription_expiry' => now()->addMonth(),
             'is_domain_active' => true,
@@ -174,7 +187,7 @@ class SuperAdminController extends Controller
         return view('superadmin.tenants.edit', compact('tenant'));
     }
 
-    public function updateTenant(UpdateSuperAdminTenantRequest $request, Tenant $tenant)
+    public function updateTenant(UpdateTenantBySuperAdminRequest $request, Tenant $tenant)
     {
         $wasPending = $tenant->status === 'pending';
         $previousDomain = $tenant->domain;
@@ -259,17 +272,13 @@ class SuperAdminController extends Controller
         return view('superadmin.profile', compact('user'));
     }
 
-    public function updateProfile(Request $request)
+    public function updateProfile(UpdateSuperAdminProfileRequest $request)
     {
         abort_unless(Auth::user()?->isSuperAdmin(), 403);
 
         $user = Auth::user();
 
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
-            'password' => 'nullable|confirmed|min:8',
-        ]);
+        $data = $request->validated();
 
         $user->name = $data['name'];
         $user->email = $data['email'];

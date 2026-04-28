@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -86,12 +87,8 @@ class User extends Authenticatable
 
     public function isStaff(): bool
     {
-        return in_array($this->role, [
-            'branch_manager',
-            'reservation_staff',
-            'fleet_maintenance_staff',
-            'cashier_billing_staff',
-        ], true);
+        return $this->tenant_id !== null
+            && ! in_array($this->role, ['super_admin', 'admin', 'customer'], true);
     }
 
     public function canManageTenantSettings(): bool
@@ -128,6 +125,25 @@ class User extends Authenticatable
             'fleet_maintenance_staff' => 'Fleet & Maintenance Staff',
             'cashier_billing_staff' => 'Cashier/Billing Staff',
         ];
+    }
+
+    public static function staffRolesForTenant(?Tenant $tenant): array
+    {
+        $roles = self::staffRoles();
+        $stored = is_array($tenant?->staff_role_permissions) ? $tenant->staff_role_permissions : [];
+
+        foreach (array_keys($stored) as $roleKey) {
+            if (! is_string($roleKey) || $roleKey === '' || isset($roles[$roleKey])) {
+                continue;
+            }
+
+            $roles[$roleKey] = Str::of($roleKey)
+                ->replace(['-', '_'], ' ')
+                ->title()
+                ->toString();
+        }
+
+        return $roles;
     }
 
     public static function permissionLabels(): array

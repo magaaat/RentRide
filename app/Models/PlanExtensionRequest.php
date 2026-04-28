@@ -10,6 +10,10 @@ class PlanExtensionRequest extends Model
     protected $fillable = [
         'tenant_id',
         'requested_plan',
+        'payment_method',
+        'payment_reference',
+        'payment_proof_path',
+        'payment_notes',
         'status', // pending|approved|rejected
         'notes',
         'reviewed_by',

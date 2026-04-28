@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCustomerRequest;
 use App\Mail\CustomerWelcomeMail;
 use App\Models\Customer;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class CustomerController extends TenantControllerBase
 {
@@ -28,22 +27,12 @@ class CustomerController extends TenantControllerBase
         return view('customers.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreCustomerRequest $request)
     {
         $tenantId = $this->tenantId();
         abort_unless($tenantId, 403);
 
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => [
-                'required',
-                'email',
-                Rule::unique('customers', 'email')->where(fn ($q) => $q->where('tenant_id', $tenantId)),
-                'unique:users,email',
-            ],
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string',
-        ]);
+        $data = $request->validated();
 
         $data['tenant_id'] = $tenantId;
 

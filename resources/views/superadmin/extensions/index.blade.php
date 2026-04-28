@@ -21,6 +21,7 @@
                     <tr class="text-left text-slate-200">
                         <th class="px-5 py-3 font-semibold">Tenant</th>
                         <th class="px-5 py-3 font-semibold">Requested Plan</th>
+                        <th class="px-5 py-3 font-semibold">Manual Payment</th>
                         <th class="px-5 py-3 font-semibold">Requested At</th>
                         <th class="px-5 py-3 font-semibold">Action</th>
                     </tr>
@@ -38,6 +39,15 @@
                                 @if(! $req->plan || ! $req->plan->show_on_landing || ! $req->plan->is_active)
                                     <span class="ms-2 inline-flex items-center rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 text-[11px] font-semibold">Unavailable</span>
                                 @endif
+                            </td>
+                            <td class="px-5 py-3">
+                                <div class="text-xs text-slate-200">
+                                    <div><span class="text-slate-400">Method:</span> {{ strtoupper(str_replace('_', ' ', (string) $req->payment_method)) ?: '-' }}</div>
+                                    <div><span class="text-slate-400">Ref:</span> {{ $req->payment_reference ?: '-' }}</div>
+                                    @if($req->payment_proof_path)
+                                        <a href="{{ asset('storage/' . $req->payment_proof_path) }}" target="_blank" rel="noopener noreferrer" class="rr-link-accent underline">View proof</a>
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-5 py-3 text-slate-300">{{ $req->created_at->format('Y-m-d H:i') }}</td>
                             <td class="px-5 py-3">
@@ -63,7 +73,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-5 py-6 text-slate-300">No pending extension requests.</td>
+                            <td colspan="5" class="px-5 py-6 text-slate-300">No pending extension requests.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -81,6 +91,7 @@
                     <tr class="text-left text-slate-200">
                         <th class="px-5 py-3 font-semibold">Tenant</th>
                         <th class="px-5 py-3 font-semibold">Plan</th>
+                        <th class="px-5 py-3 font-semibold">Manual Payment</th>
                         <th class="px-5 py-3 font-semibold">Status</th>
                         <th class="px-5 py-3 font-semibold">Reviewed At</th>
                     </tr>
@@ -97,6 +108,15 @@
                                 <span class="text-xs text-slate-500">({{ $req->requested_plan }})</span>
                             </td>
                             <td class="px-5 py-3">
+                                <div class="text-xs text-slate-200">
+                                    <div><span class="text-slate-400">Method:</span> {{ strtoupper(str_replace('_', ' ', (string) $req->payment_method)) ?: '-' }}</div>
+                                    <div><span class="text-slate-400">Ref:</span> {{ $req->payment_reference ?: '-' }}</div>
+                                    @if($req->payment_proof_path)
+                                        <a href="{{ asset('storage/' . $req->payment_proof_path) }}" target="_blank" rel="noopener noreferrer" class="rr-link-accent underline">View proof</a>
+                                    @endif
+                                </div>
+                            </td>
+                            <td class="px-5 py-3">
                                 @if($req->status === 'approved')
                                     <span class="rr-chip-accent inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">Approved</span>
                                 @else
@@ -107,7 +127,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-5 py-6 text-slate-300">No recent decisions yet.</td>
+                            <td colspan="5" class="px-5 py-6 text-slate-300">No recent decisions yet.</td>
                         </tr>
                     @endforelse
                 </tbody>

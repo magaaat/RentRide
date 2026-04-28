@@ -10,7 +10,7 @@
     </div>
 
     <div class="rr-panel-elevated p-6 sm:p-8">
-        <form method="POST" action="{{ route('superadmin.tenants.store') }}" class="space-y-5">
+        <form method="POST" action="{{ route('superadmin.tenants.store') }}" enctype="multipart/form-data" class="space-y-5">
             @csrf
             <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div>
@@ -54,6 +54,35 @@
                 <label class="rr-label" for="domain">Domain <span class="font-normal text-slate-500">(optional)</span></label>
                 <input id="domain" type="text" name="domain" value="{{ old('domain') }}" placeholder="e.g. company.localhost" class="rr-input">
                 <p class="mt-1.5 text-xs text-slate-500">Leave blank to auto-generate: company-name.localhost (port is added from APP_URL, e.g. :8000).</p>
+            </div>
+
+            <div class="rounded-xl border border-slate-700/80 bg-slate-900/50 p-4 space-y-4">
+                <h3 class="text-sm font-semibold text-violet-300">Manual payment details</h3>
+                <p class="text-xs text-slate-400">Provide payment information and upload proof for internal verification (no payment API).</p>
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <div>
+                        <label class="rr-label" for="payment_method">Payment method</label>
+                        <select id="payment_method" name="payment_method" required class="rr-input">
+                            <option value="">Select method</option>
+                            <option value="gcash" @selected(old('payment_method') === 'gcash')>GCash</option>
+                            <option value="maya" @selected(old('payment_method') === 'maya')>Maya</option>
+                            <option value="bank_transfer" @selected(old('payment_method') === 'bank_transfer')>Bank Transfer</option>
+                            <option value="cash" @selected(old('payment_method') === 'cash')>Cash</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="rr-label" for="payment_reference">Reference number</label>
+                        <input id="payment_reference" type="text" name="payment_reference" value="{{ old('payment_reference') }}" required class="rr-input" placeholder="Transaction or receipt reference">
+                    </div>
+                </div>
+                <div>
+                    <label class="rr-label" for="payment_proof">Proof of payment (JPG, PNG, PDF)</label>
+                    <input id="payment_proof" type="file" name="payment_proof" accept=".jpg,.jpeg,.png,.pdf" required class="rr-input">
+                </div>
+                <div>
+                    <label class="rr-label" for="payment_notes">Payment notes (optional)</label>
+                    <textarea id="payment_notes" name="payment_notes" rows="2" class="rr-input" placeholder="Additional payment verification notes">{{ old('payment_notes') }}</textarea>
+                </div>
             </div>
 
             <div class="flex flex-wrap justify-end gap-3 pt-2">

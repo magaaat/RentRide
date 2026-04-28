@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpgradeSubscriptionRequest;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 
 class SubscriptionController extends TenantControllerBase
 {
@@ -30,17 +29,11 @@ class SubscriptionController extends TenantControllerBase
         return view('admin.subscriptions.upgrade', compact('plans'));
     }
 
-    public function upgrade(Request $request)
+    public function upgrade(UpgradeSubscriptionRequest $request)
     {
         $tenant = Auth::user()->tenant;
 
-        $data = $request->validate([
-            'plan_key' => [
-                'required',
-                'string',
-                Rule::exists('subscription_plans', 'key')->where('is_active', 1),
-            ],
-        ]);
+        $data = $request->validated();
 
         $plan = SubscriptionPlan::where('key', $data['plan_key'])->firstOrFail();
         $price = $plan->discountedPrice();

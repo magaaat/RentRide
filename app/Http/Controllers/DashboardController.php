@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\PlanExtensionRequest;
+use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
 use App\Models\Vehicle;
 use App\Support\PlanLimits;
@@ -18,11 +19,27 @@ class DashboardController extends Controller
         abort_unless(auth()->user()?->isSuperAdmin(), 403);
 
         $totalTenants = Tenant::count();
-        $activeSubscriptions = Tenant::whereDate('subscription_expiry', '>=', now())->count();
-        $platformRevenue = Tenant::query()
-            ->where('status', 'approved')
-            ->join('subscription_plans', 'subscription_plans.key', '=', 'tenants.subscription_plan')
-            ->sum('subscription_plans.base_price');
+        $activeTenantQuery = Tenant::query()->where('status', 'approved');
+        $activeSubscriptions = (clone $activeTenantQuery)->count();
+
+        $activePlanKeys = (clone $activeTenantQuery)
+            ->pluck('subscription_plan')
+            ->filter()
+            ->values();
+
+        $planPrices = SubscriptionPlan::query()
+            ->whereIn('key', $activePlanKeys)
+            ->get()
+            ->keyBy('key');
+
+        $platformRevenue = $activePlanKeys->sum(function (string $planKey) use ($planPrices): float {
+            $plan = $planPrices->get($planKey);
+            if (! $plan) {
+                return 0.0;
+            }
+
+            return (float) $plan->discountedPrice();
+        });
 
         return view('superadmin.dashboard', compact(
             'totalTenants',
