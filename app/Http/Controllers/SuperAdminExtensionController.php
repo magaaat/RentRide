@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\RejectPlanExtensionRequest;
 use App\Mail\PlanExtensionApprovedMail;
 use App\Models\PlanExtensionRequest;
 use App\Models\SubscriptionPlan;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 
@@ -67,7 +67,7 @@ class SuperAdminExtensionController extends Controller
         return redirect()->route('superadmin.extensions.index')->with('success', 'Extension approved. Tenant domain has been re-enabled.');
     }
 
-    public function reject(Request $request, PlanExtensionRequest $extension)
+    public function reject(RejectPlanExtensionRequest $request, PlanExtensionRequest $extension)
     {
         abort_unless(Auth::user()?->isSuperAdmin(), 403);
 
@@ -75,9 +75,7 @@ class SuperAdminExtensionController extends Controller
             return back()->withErrors(['email' => 'This extension request is no longer pending.']);
         }
 
-        $data = $request->validate([
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ]);
+        $data = $request->validated();
 
         $extension->status = 'rejected';
         $extension->notes = $data['notes'] ?? null;

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\UpdateTenantUserProfileRequest;
 use Illuminate\Support\Facades\Auth;
 
 class TenantUserProfileController extends Controller
@@ -21,7 +21,7 @@ class TenantUserProfileController extends Controller
         return view('admin.staff.my-profile', ['user' => $user]);
     }
 
-    public function update(Request $request)
+    public function update(UpdateTenantUserProfileRequest $request)
     {
         $user = Auth::user();
         if ($user && $user->isAdmin()) {
@@ -29,11 +29,7 @@ class TenantUserProfileController extends Controller
         }
         abort_unless($user && $user->isStaff(), 403);
 
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'password' => ['nullable', 'confirmed', 'min:8'],
-        ]);
+        $data = $request->validated();
 
         $user->name = $data['name'];
         $user->email = $data['email'];

@@ -6,7 +6,7 @@
 <div class="min-h-[70vh] flex items-center justify-center py-8">
     <div class="w-full max-w-3xl bg-slate-800/80 border border-slate-700 rounded-2xl shadow-2xl p-8 backdrop-blur">
         <h3 class="text-2xl font-semibold text-center mb-6">Register Rental Company</h3>
-        <form method="POST" action="{{ route('tenant.register.post') }}" class="space-y-5">
+        <form method="POST" action="{{ route('tenant.register.post') }}" enctype="multipart/form-data" class="space-y-5">
             @csrf
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -90,6 +90,42 @@
                             Locked from previous selection
                         @endif
                     </span>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-slate-600/80 bg-slate-900/40 p-4 space-y-4">
+                <h4 class="text-sm font-semibold text-violet-300">Manual payment details</h4>
+                <p class="text-xs text-slate-300">
+                    No online API is used. Submit your payment method, reference number, and proof of payment for Super Admin review.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Payment Method</label>
+                        <select name="payment_method" required class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+                            <option value="">Select method</option>
+                            <option value="gcash" @selected(old('payment_method') === 'gcash')>GCash</option>
+                            <option value="maya" @selected(old('payment_method') === 'maya')>Maya</option>
+                            <option value="bank_transfer" @selected(old('payment_method') === 'bank_transfer')>Bank Transfer</option>
+                            <option value="cash" @selected(old('payment_method') === 'cash')>Cash</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Reference Number</label>
+                        <input type="text" name="payment_reference" value="{{ old('payment_reference') }}" required
+                               placeholder="e.g. GCash ref #"
+                               class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Proof of Payment (JPG, PNG, PDF)</label>
+                    <input type="file" name="payment_proof" accept=".jpg,.jpeg,.png,.pdf" required
+                           class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Notes (Optional)</label>
+                    <textarea name="payment_notes" rows="2"
+                              class="w-full rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                              placeholder="Any payment details for verification">{{ old('payment_notes') }}</textarea>
                 </div>
             </div>
 

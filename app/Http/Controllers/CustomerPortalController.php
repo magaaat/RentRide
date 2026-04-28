@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCustomerPortalBookingRequest;
 use App\Mail\CustomerBookingPlacedMail;
 use App\Models\Booking;
 use App\Models\Customer;
@@ -124,7 +125,7 @@ class CustomerPortalController extends Controller
         return view('customer.vehicle-show', compact('tenant', 'vehicle', 'canRent'));
     }
 
-    public function storeBooking(Request $request, Tenant $tenant, Vehicle $vehicle)
+    public function storeBooking(StoreCustomerPortalBookingRequest $request, Tenant $tenant, Vehicle $vehicle)
     {
         $this->ensureApprovedTenant($tenant);
         abort_unless((int) $vehicle->tenant_id === (int) $tenant->id, 404);
@@ -138,10 +139,7 @@ class CustomerPortalController extends Controller
                 ->withErrors(['license' => 'Upload the front and back of your driver’s license in your profile before booking.']);
         }
 
-        $data = $request->validate([
-            'start_date' => ['required', 'date', 'after_or_equal:today'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-        ]);
+        $data = $request->validated();
 
         if (! in_array($vehicle->status, ['available'], true)) {
             return back()->withErrors(['vehicle' => 'This vehicle is not available for booking right now.'])->withInput();

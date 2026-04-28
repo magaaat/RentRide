@@ -72,6 +72,7 @@ Route::get('/register-tenant', [AuthController::class, 'showRegisterTenant'])->n
 Route::post('/register-tenant', [AuthController::class, 'registerTenant'])->name('tenant.register.post');
 
 // Tenant plan extension request (guest, shown when domain disabled)
+Route::get('/tenant/extend-request', [AuthController::class, 'showPlanExtensionRequestForm'])->name('tenant.extend.request.form');
 Route::post('/tenant/extend-request', [AuthController::class, 'requestPlanExtension'])->name('tenant.extend.request');
 
 // Customer registration

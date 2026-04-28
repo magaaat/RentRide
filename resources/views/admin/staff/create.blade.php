@@ -53,7 +53,19 @@
                         @foreach($roleLabels as $key => $label)
                             <option value="{{ $key }}" @selected(old('role') === $key)>{{ $label }}</option>
                         @endforeach
+                        <option value="__custom__" @selected(old('role') === '__custom__')>+ Create new role</option>
                     </select>
+                    <div id="custom-role-wrapper" class="mt-2" style="display:none;">
+                        <input
+                            type="text"
+                            name="custom_role_name"
+                            id="custom_role_name"
+                            value="{{ old('custom_role_name') }}"
+                            class="rr-input"
+                            placeholder="e.g. documents staff"
+                        >
+                        <p class="mt-1 text-xs text-slate-500">New role will be saved for this tenant and reusable later.</p>
+                    </div>
                 </div>
                 <div class="flex items-end pb-1">
                     <label class="inline-flex items-center gap-2 text-sm">
@@ -112,6 +124,18 @@
             roleSelect.addEventListener('change', function () {
                 applyDefaults(roleSelect.value);
             });
+        }
+
+        const customRoleWrapper = document.getElementById('custom-role-wrapper');
+        const customRoleInput = document.getElementById('custom_role_name');
+        const syncCustomRole = () => {
+            const isCustom = roleSelect && roleSelect.value === '__custom__';
+            if (customRoleWrapper) customRoleWrapper.style.display = isCustom ? '' : 'none';
+            if (customRoleInput) customRoleInput.required = !!isCustom;
+        };
+        if (roleSelect) {
+            roleSelect.addEventListener('change', syncCustomRole);
+            syncCustomRole();
         }
 
         const syncPasswordFields = () => {

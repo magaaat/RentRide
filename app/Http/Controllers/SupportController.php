@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreSuperAdminChatMessageRequest;
+use App\Http\Requests\StoreSuperAdminReplyRequest;
+use App\Http\Requests\StoreTenantInquiryRequest;
 use App\Models\Tenant;
 use App\Models\TenantChatMessage;
 use App\Models\TenantInquiry;
@@ -57,14 +60,12 @@ class SupportController extends Controller
         ]);
     }
 
-    public function storeTenantInquiry(Request $request): RedirectResponse
+    public function storeTenantInquiry(StoreTenantInquiryRequest $request): RedirectResponse
     {
         $user = Auth::user();
         abort_unless($user?->isTenantUser() && $user->tenant_id, 403);
 
-        $data = $request->validate([
-            'message' => ['required', 'string', 'max:3000'],
-        ]);
+        $data = $request->validated();
 
         TenantInquiry::query()->create([
             'tenant_id' => (int) $user->tenant_id,
@@ -209,13 +210,11 @@ class SupportController extends Controller
         ]);
     }
 
-    public function storeSuperAdminReply(Request $request, TenantInquiry $inquiry): RedirectResponse
+    public function storeSuperAdminReply(StoreSuperAdminReplyRequest $request, TenantInquiry $inquiry): RedirectResponse
     {
         abort_unless(Auth::user()?->isSuperAdmin(), 403);
 
-        $data = $request->validate([
-            'reply_message' => ['required', 'string', 'max:3000'],
-        ]);
+        $data = $request->validated();
 
         $inquiry->update([
             'reply_message' => trim($data['reply_message']),
@@ -227,13 +226,11 @@ class SupportController extends Controller
             ->route('superadmin.about');
     }
 
-    public function storeSuperAdminChatMessage(Request $request, Tenant $tenant): RedirectResponse
+    public function storeSuperAdminChatMessage(StoreSuperAdminChatMessageRequest $request, Tenant $tenant): RedirectResponse
     {
         abort_unless(Auth::user()?->isSuperAdmin(), 403);
 
-        $data = $request->validate([
-            'message' => ['required', 'string', 'max:3000'],
-        ]);
+        $data = $request->validated();
 
         TenantChatMessage::query()->create([
             'tenant_id' => (int) $tenant->id,

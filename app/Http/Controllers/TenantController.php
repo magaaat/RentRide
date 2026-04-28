@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\UpdateTenantProfileRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -17,25 +17,12 @@ class TenantController extends Controller
         return view('admin.tenant.profile', compact('tenant', 'user'));
     }
 
-    public function updateProfile(Request $request)
+    public function updateProfile(UpdateTenantProfileRequest $request)
     {
         $user = Auth::user();
         $tenant = $user->tenant;
 
-        $data = $request->validate([
-            'company_name' => 'required|string|max:255',
-            'owner_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'address' => 'nullable|string',
-            'theme' => 'required|in:slate,indigo,emerald,fuchsia',
-            'logo' => 'nullable|image|max:5120',
-            'public_tagline' => 'nullable|string|max:255',
-            'website_url' => 'nullable|url|max:512',
-            'public_booking_notes' => 'nullable|string|max:5000',
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
-            'new_password' => 'nullable|confirmed|min:8',
-        ]);
+        $data = $request->validated();
 
         $tenant->update([
             'company_name' => $data['company_name'],

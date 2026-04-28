@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StorePaymentRequest;
 use App\Mail\CustomerBookingStatusChangedMail;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Tenant;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -33,16 +33,11 @@ class PaymentController extends TenantControllerBase
         return view('payments.create', compact('booking'));
     }
 
-    public function store(Request $request, Booking $booking)
+    public function store(StorePaymentRequest $request, Booking $booking)
     {
         $this->authorizeTenantAccess($booking);
 
-        $data = $request->validate([
-            'amount' => 'required|numeric|min:0',
-            'payment_method' => 'required|string|max:255',
-            'payment_status' => 'required|in:pending,paid,failed,refunded',
-            'payment_date' => 'nullable|date',
-        ]);
+        $data = $request->validated();
 
         $booking->loadMissing('vehicle', 'customer', 'payment', 'tenant');
 

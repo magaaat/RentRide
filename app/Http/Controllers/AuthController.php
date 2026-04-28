@@ -2,6 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\RegisterTenantRequest;
+use App\Http\Requests\CustomerLoginRequest;
+use App\Http\Requests\RegisterCustomerRequest;
+use App\Http\Requests\ResetPasswordRequest;
+use App\Http\Requests\RequestPlanExtensionRequest;
+use App\Http\Requests\SendPasswordResetCodeRequest;
+use App\Http\Requests\TenantLoginRequest;
+use App\Http\Requests\UpdateCustomerProfileRequest;
+use App\Http\Requests\VerifyPasswordResetCodeRequest;
 use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
 use App\Models\User;
@@ -15,7 +24,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -37,15 +45,11 @@ class AuthController extends Controller
         ]);
     }
 
-    public function sendResetCode(Request $request)
+    public function sendResetCode(SendPasswordResetCodeRequest $request)
     {
         $this->syncPasswordResetReturnFromRequest($request);
 
-        $data = $request->validate([
-            'email' => ['required', 'email', 'exists:users,email'],
-            'from' => ['nullable', 'string', 'max:32'],
-            'tenant' => ['nullable'],
-        ]);
+        $data = $request->validated();
 
         $user = User::where('email', $data['email'])->firstOrFail();
 
@@ -112,11 +116,9 @@ class AuthController extends Controller
         ]);
     }
 
-    public function verifyResetCode(Request $request)
+    public function verifyResetCode(VerifyPasswordResetCodeRequest $request)
     {
-        $data = $request->validate([
-            'code' => ['required', 'digits:6'],
-        ]);
+        $data = $request->validated();
 
         $email = session('password_reset_email');
         if (! $email) {
@@ -159,11 +161,9 @@ class AuthController extends Controller
         ]);
     }
 
-    public function resetPassword(Request $request)
+    public function resetPassword(ResetPasswordRequest $request)
     {
-        $data = $request->validate([
-            'password' => ['required', 'confirmed', 'min:8'],
-        ]);
+        $data = $request->validated();
 
         $email = session('password_reset_email');
         if (! $email || ! session('password_reset_verified')) {
@@ -263,6 +263,21 @@ class AuthController extends Controller
         return Tenant::where('slug', $slug)->first();
     }
 
+    protected function resolveTenantFromHostOrQuery(Request $request): ?Tenant
+    {
+        $host = $request->getHost();
+        $centralDomains = config('tenancy.central_domains', []);
+
+        if (! in_array($host, $centralDomains, true)) {
+            $tenantByHost = Tenant::where('domain', $host)->first();
+            if ($tenantByHost) {
+                return $tenantByHost;
+            }
+        }
+
+        return $this->resolveTenantFromQuery((string) $request->query('tenant'));
+    }
+
     public function showLogin(Request $request)
     {
         // If a tenant domain is opened directly (e.g. company.localhost:8000/login),
@@ -316,15 +331,9 @@ class AuthController extends Controller
         return view('auth.customer-login');
     }
 
-    public function customerLogin(Request $request)
+    public function customerLogin(CustomerLoginRequest $request)
     {
-        $validated = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-            'g-recaptcha-response' => $this->shouldValidateRecaptcha()
-                ? ['required', 'string']
-                : ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
         $this->assertRecaptchaValid($request);
 
         $credentials = [
@@ -355,16 +364,9 @@ class AuthController extends Controller
         return redirect()->intended(route('customer.dashboard'));
     }
 
-    public function login(Request $request)
+    public function login(TenantLoginRequest $request)
     {
-        $validated = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-            'login_tenant_id' => ['nullable', 'integer', 'exists:tenants,id'],
-            'g-recaptcha-response' => $this->shouldValidateRecaptcha()
-                ? ['required', 'string']
-                : ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
         $this->assertRecaptchaValid($request);
 
         $credentials = [
@@ -487,17 +489,40 @@ class AuthController extends Controller
         return view('auth.tenant-register');
     }
 
-    public function registerTenant(Request $request)
+    public function showPlanExtensionRequestForm(Request $request)
     {
-        $data = $request->validate([
-            'company_name' => 'required|string|max:255',
-            'owner_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:tenants,email',
-            'phone' => 'required|string|max:20',
-            'address' => 'nullable|string',
-            'password' => 'required|confirmed|min:8',
-            'plan' => ['required', Rule::exists('subscription_plans', 'key')->where('is_active', true)],
-        ]);
+        $tenant = $this->resolveTenantFromHostOrQuery($request);
+        if (! $tenant) {
+            return redirect()->route('login')
+                ->withErrors(['email' => 'Tenant not found.']);
+        }
+
+        $expired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry);
+        if (! $expired) {
+            $tenantKey = $tenant->slug ?: (string) $tenant->id;
+
+            return redirect()->route('login', ['tenant' => $tenantKey])
+                ->withErrors(['email' => 'Plan extension is only available for expired subscriptions.']);
+        }
+
+        $plans = SubscriptionPlan::query()
+            ->where('show_on_landing', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $hasPending = PlanExtensionRequest::where('tenant_id', $tenant->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        return view('auth.tenant-extension-request', compact('tenant', 'plans', 'hasPending'));
+    }
+
+    public function registerTenant(RegisterTenantRequest $request)
+    {
+        $data = $request->validated();
+
+        $paymentProofPath = $request->file('payment_proof')->store('tenant-payments/signup', 'public');
 
         $tenant = Tenant::create([
             'company_name' => $data['company_name'],
@@ -509,6 +534,10 @@ class AuthController extends Controller
             'phone' => $data['phone'],
             'address' => $data['address'] ?? null,
             'subscription_plan' => $data['plan'],
+            'signup_payment_method' => $data['payment_method'],
+            'signup_payment_reference' => $data['payment_reference'],
+            'signup_payment_proof_path' => $paymentProofPath,
+            'signup_payment_notes' => $data['payment_notes'] ?? null,
             // Expiry starts when the tenant is approved (set by Super Admin).
             'subscription_expiry' => null,
         ]);
@@ -529,24 +558,16 @@ class AuthController extends Controller
             );
     }
 
-    public function requestPlanExtension(Request $request)
+    public function requestPlanExtension(RequestPlanExtensionRequest $request)
     {
-        $data = $request->validate([
-            'tenant_id' => ['required', 'integer', 'exists:tenants,id'],
-            'requested_plan' => [
-                'required',
-                Rule::exists('subscription_plans', 'key')
-                    ->where('show_on_landing', true)
-                    ->where('is_active', true),
-            ],
-        ]);
+        $data = $request->validated();
 
         $tenant = Tenant::findOrFail($data['tenant_id']);
         $tenantKey = $tenant->slug ?: (string) $tenant->id;
 
-        // Only allow requests if the tenant is approved but currently disabled/expired.
+        // Only allow requests for approved tenants with expired subscriptions.
         $expired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry);
-        if ($tenant->status !== 'approved' || ($tenant->is_domain_active && ! $expired)) {
+        if ($tenant->status !== 'approved' || ! $expired) {
             return redirect()->route('login', ['tenant' => $tenantKey])
                 ->withErrors(['email' => 'This tenant does not require a plan extension at the moment.']);
         }
@@ -560,9 +581,15 @@ class AuthController extends Controller
                 ->with('success', 'Your extension request is already pending approval.');
         }
 
+        $paymentProofPath = $request->file('payment_proof')->store('tenant-payments/extensions', 'public');
+
         PlanExtensionRequest::create([
             'tenant_id' => $tenant->id,
             'requested_plan' => $data['requested_plan'],
+            'payment_method' => $data['payment_method'],
+            'payment_reference' => $data['payment_reference'],
+            'payment_proof_path' => $paymentProofPath,
+            'payment_notes' => $data['payment_notes'] ?? null,
             'status' => 'pending',
         ]);
 
@@ -575,15 +602,9 @@ class AuthController extends Controller
         return view('auth.customer-register');
     }
 
-    public function registerCustomer(Request $request)
+    public function registerCustomer(RegisterCustomerRequest $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'phone' => 'nullable|string|max:30',
-            'address' => 'nullable|string|max:500',
-            'password' => 'required|confirmed|min:8',
-        ]);
+        $data = $request->validated();
 
         $user = User::create([
             'name' => $data['name'],
@@ -631,21 +652,13 @@ class AuthController extends Controller
         return view('customer.profile', compact('user'));
     }
 
-    public function updateCustomerProfile(Request $request)
+    public function updateCustomerProfile(UpdateCustomerProfileRequest $request)
     {
         $user = Auth::user();
 
         abort_unless($user?->isCustomer(), 403);
 
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'password' => ['nullable', 'confirmed', 'min:8'],
-            'license_front' => ['nullable', 'image', 'max:5120'],
-            'license_back' => ['nullable', 'image', 'max:5120'],
-        ]);
+        $data = $request->validated();
 
         $user->name = $data['name'];
         $user->email = $data['email'];
@@ -717,20 +730,18 @@ class AuthController extends Controller
 
     protected function renderTenantLoginPage(Tenant $tenant)
     {
-        // If domain is disabled (or expired), show the domain disabled page (pre-login)
+        // If domain is disabled or expired, show the disabled page with reason-specific messaging.
         $expired = $tenant->subscription_expiry && now()->greaterThan($tenant->subscription_expiry);
         if (! $tenant->is_domain_active || $expired) {
-            $plans = SubscriptionPlan::query()
-                ->where('show_on_landing', true)
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->get();
-
             $hasPending = PlanExtensionRequest::where('tenant_id', $tenant->id)
                 ->where('status', 'pending')
                 ->exists();
 
-            return view('auth.tenant-domain-disabled', compact('tenant', 'plans', 'hasPending'));
+            $disabledReason = $expired ? 'expired' : 'maintenance';
+            $tenantKey = $tenant->slug ?: (string) $tenant->id;
+            $extensionRequestUrl = route('tenant.extend.request.form', ['tenant' => $tenantKey]);
+
+            return view('auth.tenant-domain-disabled', compact('tenant', 'hasPending', 'disabledReason', 'extensionRequestUrl'));
         }
 
         return view('auth.tenant-login', compact('tenant'));

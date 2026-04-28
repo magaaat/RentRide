@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreBookingRequest;
+use App\Http\Requests\UpdateBookingStatusRequest;
 use App\Mail\CustomerBookingStatusChangedMail;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Tenant;
 use App\Models\Vehicle;
 use App\Support\PlanLimits;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 
@@ -35,16 +36,11 @@ class BookingController extends TenantControllerBase
         return view('bookings.create', compact('vehicles', 'customers'));
     }
 
-    public function store(Request $request)
+    public function store(StoreBookingRequest $request)
     {
         $tenantId = $this->tenantId();
 
-        $data = $request->validate([
-            'vehicle_id' => 'required|exists:vehicles,id',
-            'customer_id' => 'required|exists:customers,id',
-            'start_date' => 'required|date|after_or_equal:today',
-            'end_date' => 'required|date|after_or_equal:start_date',
-        ]);
+        $data = $request->validated();
 
         $vehicle = Vehicle::where('tenant_id', $tenantId)->findOrFail($data['vehicle_id']);
 
@@ -79,13 +75,11 @@ class BookingController extends TenantControllerBase
         return redirect()->route('bookings.index')->with('success', 'Booking created.');
     }
 
-    public function updateStatus(Request $request, Booking $booking)
+    public function updateStatus(UpdateBookingStatusRequest $request, Booking $booking)
     {
         $this->authorizeTenantAccess($booking);
 
-        $data = $request->validate([
-            'status' => 'required|in:pending,confirmed,cancelled,completed',
-        ]);
+        $data = $request->validated();
 
         if ($data['status'] === 'confirmed') {
             $booking->loadMissing('payment');
