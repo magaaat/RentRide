@@ -172,9 +172,10 @@ class TenantReleaseUpdater
      */
     protected function subprocessEnvironment(): array
     {
+        $base = array_merge($_ENV, $_SERVER);
         $env = [];
 
-        foreach (array_merge($_ENV, $_SERVER) as $key => $value) {
+        foreach ($base as $key => $value) {
             if (! is_string($key) || $key === '') {
                 continue;
             }
@@ -220,6 +221,29 @@ class TenantReleaseUpdater
                 $env['PATH'] = $path;
                 $env['Path'] = $path;
             }
+
+            $userProfile = $env['USERPROFILE'] ?? getenv('USERPROFILE');
+            if (! is_string($userProfile) || $userProfile === '') {
+                $username = getenv('USERNAME');
+                $userProfile = 'C:\\Users\\'.(is_string($username) && $username !== '' ? $username : 'Default');
+            }
+            $userProfile = rtrim($userProfile, '\\/');
+
+            $appData = $env['APPDATA'] ?? getenv('APPDATA') ?: $userProfile.'\\AppData\\Roaming';
+            $composerHome = $env['COMPOSER_HOME'] ?? getenv('COMPOSER_HOME') ?: rtrim((string) $appData, '\\/').'\\Composer';
+            $home = $env['HOME'] ?? getenv('HOME') ?: $userProfile;
+
+            $localAppData = $env['LOCALAPPDATA'] ?? getenv('LOCALAPPDATA') ?: $userProfile.'\\AppData\\Local';
+            $temp = $env['TEMP'] ?? getenv('TEMP') ?: rtrim((string) $localAppData, '\\/').'\\Temp';
+            $tmp = $env['TMP'] ?? getenv('TMP') ?: $temp;
+
+            $env['USERPROFILE'] = $userProfile;
+            $env['APPDATA'] = (string) $appData;
+            $env['COMPOSER_HOME'] = (string) $composerHome;
+            $env['HOME'] = (string) $home;
+            $env['LOCALAPPDATA'] = (string) $localAppData;
+            $env['TEMP'] = (string) $temp;
+            $env['TMP'] = (string) $tmp;
         }
 
         $env['GIT_TERMINAL_PROMPT'] = '0';
@@ -257,9 +281,9 @@ class TenantReleaseUpdater
         }
 
         $merged = $prefix.$path;
-        $process->setEnv([
-            'PATH' => $merged,
-            'Path' => $merged,
-        ]);
+        $env = $process->getEnv();
+        $env['PATH'] = $merged;
+        $env['Path'] = $merged;
+        $process->setEnv($env);
     }
 }
