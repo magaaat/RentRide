@@ -8,13 +8,18 @@ use App\Models\Student;
 
 class StudentController extends Controller
 {
+    public function create()
+    {
+        return redirect()->route('students.index');
+    }
+
     public function index()
     {
         $students = Student::query()
             ->latest()
-            ->paginate(12);
+            ->paginate(10);
 
-        return view('tenant.students.index', compact('students'));
+        return view('admin.students.index', compact('students'));
     }
 
     public function store(StoreStudentRequest $request)
@@ -22,7 +27,7 @@ class StudentController extends Controller
         Student::create($request->validated());
 
         return redirect()
-            ->route('tenant.students.index')
+            ->route('students.index')
             ->with('success', 'Student created.');
     }
 
@@ -31,7 +36,7 @@ class StudentController extends Controller
         $student->update($request->validated());
 
         return redirect()
-            ->route('tenant.students.index')
+            ->route('students.index')
             ->with('success', 'Student updated.');
     }
 
@@ -40,7 +45,17 @@ class StudentController extends Controller
         $student->delete();
 
         return redirect()
-            ->route('tenant.students.index')
+            ->route('students.index')
             ->with('success', 'Student deleted.');
+    }
+
+    public function show(Student $student)
+    {
+        return redirect()->route('students.index');
+    }
+
+    public function edit(Student $student)
+    {
+        return redirect()->route('students.index');
     }
 }

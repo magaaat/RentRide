@@ -18,6 +18,7 @@ use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TenantUserProfileController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\StudentController;
 use Illuminate\Support\Facades\Route;
 use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
@@ -135,6 +136,8 @@ Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
             ->middleware('tenant.permission:vehicles.manage');
         Route::resource('customers', CustomerController::class)
             ->except(['edit', 'update'])
+            ->middleware('tenant.permission:customers.manage');
+        Route::resource('students', StudentController::class)
             ->middleware('tenant.permission:customers.manage');
 
         Route::get('bookings/calendar', [BookingCalendarController::class, 'index'])
