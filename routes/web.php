@@ -14,6 +14,7 @@ use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantReportController;
 use App\Http\Controllers\BookingCalendarController;
 use App\Http\Controllers\MaintenanceController;
+use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TenantUserProfileController;
 use App\Http\Controllers\SupportController;
@@ -79,6 +80,7 @@ Route::post('/tenant/extend-request', [AuthController::class, 'requestPlanExtens
 // Customer registration
 Route::get('/register-customer', [AuthController::class, 'showRegisterCustomer'])->name('customer.register');
 Route::post('/register-customer', [AuthController::class, 'registerCustomer'])->name('customer.register.post');
+Route::resource('modules', ModuleController::class);
 
 Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
     // Super admin routes (role-checked inside controller)

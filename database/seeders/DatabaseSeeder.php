@@ -93,5 +93,7 @@ class DatabaseSeeder extends Seeder
                 'tenant_id' => null,
             ]
         );
+
+        $this->call(ModuleSeeder::class);
     }
 }
