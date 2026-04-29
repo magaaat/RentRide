@@ -6,12 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('modules', function (Blueprint $table) {
+        Schema::create('test_updates', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->bigInteger('plan_id');
@@ -19,11 +16,8 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('modules');
+        Schema::dropIfExists('test_updates');
     }
 };

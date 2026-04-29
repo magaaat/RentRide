@@ -5,9 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Module extends Model
+class TestUpdate extends Model
 {
-    /** @use HasFactory<\Database\Factories\ModuleFactory> */
+    /** @use HasFactory<\Database\Factories\TestUpdateFactory> */
     use HasFactory;
 
     protected $fillable = [

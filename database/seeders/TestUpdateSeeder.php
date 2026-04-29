@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\Module;
+use App\Models\TestUpdate;
 use Illuminate\Database\Seeder;
 
-class ModuleSeeder extends Seeder
+class TestUpdateSeeder extends Seeder
 {
     public function run(): void
     {
-        Module::factory()->count(50)->create();
+        TestUpdate::factory()->count(50)->create();
     }
 }

@@ -2,21 +2,16 @@
 
 namespace Database\Factories;
 
-use App\Models\Module;
+use App\Models\TestUpdate;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Module>
+ * @extends Factory<TestUpdate>
  */
-class ModuleFactory extends Factory
+class TestUpdateFactory extends Factory
 {
     private static int $planSequence = 0;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         self::$planSequence++;
