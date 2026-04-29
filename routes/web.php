@@ -14,11 +14,11 @@ use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantReportController;
 use App\Http\Controllers\BookingCalendarController;
 use App\Http\Controllers\MaintenanceController;
+use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TenantUserProfileController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\VehicleController;
-use App\Http\Controllers\StudentController;
 use Illuminate\Support\Facades\Route;
 use App\Models\SubscriptionPlan;
 use App\Models\Tenant;
@@ -137,7 +137,7 @@ Route::middleware(['auth', 'tenant.domain.active'])->group(function () {
         Route::resource('customers', CustomerController::class)
             ->except(['edit', 'update'])
             ->middleware('tenant.permission:customers.manage');
-        Route::resource('students', StudentController::class)
+        Route::resource('modules', ModuleController::class)
             ->middleware('tenant.permission:customers.manage');
 
         Route::get('bookings/calendar', [BookingCalendarController::class, 'index'])
